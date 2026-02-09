@@ -1,5 +1,5 @@
 {
-  "name": "Hirelink",
+  "name": "HirelinkApp",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,10 +10,25 @@
     "test": "jest"
   },
   "dependencies": {
-    "react": "19.2.0",
-    "react-native": "0.83.1",
+    "@hookform/resolvers": "^5.2.2",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-documents/picker": "^12.0.0",
+    "@react-native-firebase/app": "^23.8.6",
+    "@react-native-firebase/messaging": "^23.8.6",
+    "@react-native-picker/picker": "^2.11.4",
     "@react-native/new-app-screen": "0.83.1",
-    "react-native-safe-area-context": "^5.5.2"
+    "@react-navigation/native-stack": "^7.10.1",
+    "axios": "^1.13.2",
+    "formik": "^2.4.9",
+    "react": "19.2.0",
+    "react-hook-form": "^7.71.1",
+    "react-native": "0.83.1",
+    "react-native-print": "^0.11.0",
+    "react-native-razorpay": "^2.3.1",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-screens": "^4.23.0",
+    "react-native-toast-message": "^2.3.3",
+    "yup": "^1.7.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -32,6 +47,7 @@
     "eslint": "^8.19.0",
     "jest": "^29.6.3",
     "prettier": "2.8.8",
+    "react-native-make": "^1.0.1",
     "react-test-renderer": "19.2.0",
     "typescript": "^5.8.3"
   },

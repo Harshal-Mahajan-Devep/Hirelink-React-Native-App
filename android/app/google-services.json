@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "167301932014",
+    "project_id": "hirelink-notification",
+    "storage_bucket": "hirelink-notification.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:167301932014:android:278aadc50a6b8ba59ba4ff",
+        "android_client_info": {
+          "package_name": "com.hirelink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGUXyiGLlfQxUQ3pvOy7Yo9KXs-a842sQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
