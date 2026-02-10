@@ -20,15 +20,15 @@ import logo from '../assets/hirelink.png';
 import { BASE_URL } from '../config/constants';
 import { useNavigation } from '@react-navigation/native';
 
-// ✅ Validation Schema
+/* ================= VALIDATION ================= */
 const validationSchema = Yup.object({
   email: Yup.string()
-    .email('Invalid email address')
-    .required('Enter registered email address'),
-  user_type: Yup.string().required('Please select Candidate or Employer'),
+    .email('Enter valid email address')
+    .required('Email is required'),
+  user_type: Yup.string().required('Please select user type'),
 });
 
-function Forgot() {
+export default function Forgot() {
   const navigation = useNavigation();
 
   const {
@@ -43,18 +43,13 @@ function Forgot() {
     },
   });
 
-  // ✅ Submit
+  /* ================= SUBMIT ================= */
   const onSubmit = async data => {
     try {
       const res = await fetch(`${BASE_URL}forgot-password`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: data.email,
-          user_type: data.user_type,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       });
 
       const result = await res.json();
@@ -62,21 +57,20 @@ function Forgot() {
       if (result.status) {
         Toast.show({
           type: 'success',
-          text1: 'Success',
-          text2: 'Reset link sent to your email',
+          text1: 'Reset link sent',
+          text2: 'Check your email inbox',
         });
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Error',
+          text1: 'Failed',
           text2: result.message,
         });
       }
-    } catch (error) {
+    } catch {
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: 'Something went wrong',
+        text1: 'Server error',
       });
     }
   };
@@ -86,22 +80,23 @@ function Forgot() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.page}>
+        {/* CARD */}
         <View style={styles.card}>
-          {/* Back */}
+          {/* BACK */}
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
 
-          {/* Logo */}
+          {/* LOGO */}
           <Image source={logo} style={styles.logo} />
 
-          <Text style={styles.title}>Forgot your password?</Text>
+          <Text style={styles.title}>Forgot password?</Text>
           <Text style={styles.subtitle}>
-            Enter your email and we'll send you a link to reset your password.
+            Enter your registered email address. We’ll send you a reset link.
           </Text>
 
-          {/* Email */}
+          {/* EMAIL */}
           <View style={styles.field}>
             <Text style={styles.label}>Email address</Text>
             <Controller
@@ -110,7 +105,8 @@ function Forgot() {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                  placeholder="you@gmail.com"
+                  placeholder="you@example.com"
+                  placeholderTextColor="#9ca3af"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={value}
@@ -123,60 +119,51 @@ function Forgot() {
             )}
           </View>
 
-          {/* User Type */}
-          <View style={styles.field}>
-            <View style={styles.radioContainer}>
-              <Controller
-                control={control}
-                name="user_type"
-                render={({ field: { onChange, value } }) => (
-                  <>
-                    <TouchableOpacity
-                      style={styles.radioItem}
-                      onPress={() => onChange('candidate')}
-                    >
-                      <View
-                        style={[
-                          styles.radio,
-                          value === 'candidate' && styles.radioSelected,
-                        ]}
-                      />
-                      <Text>Candidate</Text>
-                    </TouchableOpacity>
+          {/* USER TYPE */}
+          <View style={[styles.field, { textAlign: 'left' }]}>
+            <Text style={styles.label}>Account type</Text>
 
-                    {/* <TouchableOpacity
-                      style={styles.radioItem}
-                      onPress={() => onChange('employer')}
+            <Controller
+              control={control}
+              name="user_type"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.radioRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.radioBox,
+                      value === 'candidate' && styles.radioActive,
+                    ]}
+                    onPress={() => onChange('candidate')}
+                  >
+                    <Text
+                      style={[
+                        styles.radioText,
+                        value === 'candidate' && styles.radioTextActive,
+                      ]}
                     >
-                      <View
-                        style={[
-                          styles.radio,
-                          value === 'employer' && styles.radioSelected,
-                        ]}
-                      />
-                      <Text>Employer</Text>
-                    </TouchableOpacity> */}
-                  </>
-                )}
-              />
-            </View>
+                      Candidate
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
 
             {errors.user_type && (
               <Text style={styles.error}>{errors.user_type.message}</Text>
             )}
           </View>
 
-          {/* Submit */}
+          {/* SUBMIT */}
           <TouchableOpacity
-            style={styles.button}
+            style={styles.submitBtn}
             onPress={handleSubmit(onSubmit)}
           >
-            <Text style={styles.buttonText}>Send reset link</Text>
+            <Text style={styles.submitText}>Send reset link</Text>
           </TouchableOpacity>
 
-          {/* Login */}
+          {/* LOGIN */}
           <Text style={styles.loginText}>
-            Already have an account?{' '}
+            Remember password?{' '}
             <Text
               style={styles.loginLink}
               onPress={() => navigation.navigate('Signin')}
@@ -192,98 +179,129 @@ function Forgot() {
   );
 }
 
-export default Forgot;
-
-// 🎨 Styles
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: {
+  page: {
     flexGrow: 1,
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
     padding: 16,
+    backgroundColor: '#f4f7fb',
   },
+
   card: {
-    backgroundColor: 'rgb(253, 253, 253)',
-    borderRadius: 10,
-    padding: 20,
-    elevation: 4,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 22,
+    elevation: 6,
   },
-  backText: {
+
+  back: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2563eb',
     marginBottom: 10,
-    fontSize: 16,
   },
+
   logo: {
     width: 150,
     height: 60,
     resizeMode: 'contain',
     alignSelf: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
   },
+
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '900',
     textAlign: 'center',
+    color: '#111827',
   },
+
   subtitle: {
     textAlign: 'center',
-    color: '#666',
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 6,
     marginBottom: 20,
   },
+
   field: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
+
   label: {
-    fontWeight: '600',
-    marginBottom: 5,
+    fontWeight: '800',
+    marginBottom: 6,
+    color: '#111827',
   },
+
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 10,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
+    color: '#111827',
+    backgroundColor: '#fff',
   },
+
   error: {
-    color: 'red',
-    marginTop: 5,
+    color: '#dc2626',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '700',
   },
-  radioContainer: {
+
+  radioRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 30,
+    gap: 10,
   },
-  radioItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  radio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+
+  radioBox: {
     borderWidth: 1,
-    borderColor: '#464545',
+    borderColor: '#d1d5db',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
   },
-  radioSelected: {
-    backgroundColor: '#dfdfdf',
+
+  radioActive: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#22c55e',
   },
-  button: {
-    backgroundColor: '#42b85d',
-    padding: 14,
-    borderRadius: 6,
+
+  radioText: {
+    fontWeight: '700',
+    color: '#374151',
+  },
+
+  radioTextActive: {
+    color: '#16a34a',
+  },
+
+  submitBtn: {
+    backgroundColor: '#22c55e',
+    paddingVertical: 14,
+    borderRadius: 999,
     alignItems: 'center',
     marginTop: 10,
   },
-  buttonText: {
+
+  submitText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '900',
+    fontSize: 15,
   },
+
   loginText: {
     textAlign: 'center',
-    marginTop: 15,
-    color: '#666',
+    marginTop: 18,
+    fontSize: 13,
+    color: '#6b7280',
   },
+
   loginLink: {
-    color: '#28a745',
-    fontWeight: '600',
+    color: '#2563eb',
+    fontWeight: '800',
   },
 });

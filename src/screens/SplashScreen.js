@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -14,38 +15,45 @@ export default function SplashIntro({ navigation }) {
   const textOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // ✅ Smooth animation sequence
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
+    const checkLogin = async () => {
+      const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
+
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
+            toValue: 1.05,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+        ]),
         Animated.timing(scale, {
-          toValue: 1.05,
-          duration: 900,
+          toValue: 1,
+          duration: 350,
           useNativeDriver: true,
         }),
-      ]),
-      Animated.timing(scale, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.delay(900),
-      Animated.timing(textOpacity, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
+        Animated.delay(700),
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-    const timer = setTimeout(() => {
-      navigation.replace('Home');
-    }, 6500);
+      setTimeout(() => {
+        if (isLoggedIn === 'true') {
+          navigation.replace('Jobs'); // ✅ already logged in
+        } else {
+          navigation.replace('Signin'); // not logged in
+        }
+      }, 2500);
+    };
 
-    return () => clearTimeout(timer);
+    checkLogin();
   }, [navigation]);
 
   return (

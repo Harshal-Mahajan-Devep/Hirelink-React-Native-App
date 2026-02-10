@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,9 @@ import { getReceiptHTML } from '../screens/receiptTemplate';
 export default function PaymentSuccess({ navigation }) {
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(false);
+  const redirectTimer = useRef(null);
 
-  /* ================= LOAD PAYMENT ================= */
+  /* ================= LOAD PAYMENT (SAME LOGIC) ================= */
   useEffect(() => {
     const load = async () => {
       const saved = JSON.parse(await AsyncStorage.getItem('paymentDetails'));
@@ -39,16 +40,13 @@ export default function PaymentSuccess({ navigation }) {
         ...saved,
         receiptNo: saved.receiptNo || `HRLK-${Date.now().toString().slice(-8)}`,
       });
-
-      // ✅ AUTO REDIRECT AFTER 3 SECONDS
-      setTimeout(async () => {
-        await AsyncStorage.removeItem('paymentUser');
-        await AsyncStorage.removeItem('paymentDetails');
-        navigation.replace('Home');
-      }, 3000);
     };
 
     load();
+
+    return () => {
+      if (redirectTimer.current) clearTimeout(redirectTimer.current);
+    };
   }, [navigation]);
 
   /* ================= DOWNLOAD RECEIPT ================= */
@@ -57,13 +55,19 @@ export default function PaymentSuccess({ navigation }) {
       setLoading(true);
 
       const html = getReceiptHTML(payment);
-
       await RNPrint.print({ html });
 
       Toast.show({
         type: 'success',
-        text1: 'Receipt opened successfully',
+        text1: 'Receipt downloaded successfully',
       });
+
+      // ✅ REDIRECT AFTER 3 SECONDS (ONLY AFTER DOWNLOAD)
+      redirectTimer.current = setTimeout(async () => {
+        await AsyncStorage.removeItem('paymentUser');
+        await AsyncStorage.removeItem('paymentDetails');
+        navigation.replace('Jobs');
+      }, 3000);
     } catch (e) {
       Toast.show({
         type: 'error',
@@ -78,31 +82,43 @@ export default function PaymentSuccess({ navigation }) {
 
   /* ================= UI ================= */
   return (
-    <View style={styles.center}>
+    <View style={styles.page}>
       <View style={styles.card}>
-        <Text style={styles.success}>Payment Successful 🎉</Text>
+        {/* SUCCESS ICON */}
+        <View style={styles.iconCircle}>
+          <Text style={styles.check}>✓</Text>
+        </View>
 
-        <Text style={styles.info}>
-          Receipt No: <Text style={styles.bold}>{payment.receiptNo}</Text>
+        <Text style={styles.success}>Payment successful</Text>
+        <Text style={styles.sub}>
+          Your account has been activated successfully
         </Text>
 
-        <Text style={styles.info}>
-          Amount Paid: <Text style={styles.bold}>{payment.amount}</Text>
-        </Text>
+        {/* DETAILS */}
+        <View style={styles.detailBox}>
+          <Text style={styles.label}>Receipt No</Text>
+          <Text style={styles.value}>{payment.receiptNo}</Text>
 
+          <Text style={styles.label}>Amount paid</Text>
+          <Text style={styles.amount}>{payment.amount}</Text>
+        </View>
+
+        {/* DOWNLOAD */}
         <TouchableOpacity
-          style={styles.btn}
+          style={[styles.btn, loading && { opacity: 0.6 }]}
           onPress={downloadReceipt}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.btnText}>📄 Download Receipt PDF</Text>
+            <Text style={styles.btnText}>Download receipt (PDF)</Text>
           )}
         </TouchableOpacity>
 
-        <Text style={styles.redirect}>Redirecting to Home in 3 seconds...</Text>
+        <Text style={styles.note}>
+          You will be redirected to Home after downloading the receipt
+        </Text>
       </View>
     </View>
   );
@@ -110,46 +126,98 @@ export default function PaymentSuccess({ navigation }) {
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  center: {
+  page: {
     flex: 1,
     justifyContent: 'center',
     padding: 16,
     backgroundColor: '#f4f7fb',
   },
+
   card: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 22,
-    elevation: 6,
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
+
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#16a34a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+
+  check: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '900',
+  },
+
   success: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#16a34a',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#111827',
   },
-  info: {
+
+  sub: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 4,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+
+  detailBox: {
+    width: '100%',
+    backgroundColor: '#f9fafb',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+  },
+
+  label: {
+    fontSize: 11,
+    color: '#6b7280',
+    fontWeight: '700',
+  },
+
+  value: {
     fontSize: 14,
-    marginBottom: 6,
-  },
-  bold: {
     fontWeight: '800',
+    marginBottom: 8,
+    color: '#111827',
   },
+
+  amount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#16a34a',
+  },
+
   btn: {
-    backgroundColor: '#0f172a',
-    paddingVertical: 12,
-    paddingHorizontal: 22,
+    backgroundColor: '#2557a7',
+    height: 48,
     borderRadius: 999,
-    marginTop: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
+
   btnText: {
     color: '#fff',
-    fontWeight: '800',
+    fontWeight: '900',
+    fontSize: 15,
   },
-  redirect: {
-    marginTop: 12,
-    fontSize: 12,
+
+  note: {
+    fontSize: 11,
     color: '#6b7280',
+    marginTop: 12,
+    textAlign: 'center',
   },
 });

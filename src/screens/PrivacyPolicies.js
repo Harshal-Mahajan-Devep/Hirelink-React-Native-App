@@ -1,12 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
-import Header from './Header';
-import Footer from './Footer';
 
 export default function PrivacyPolicies({ navigation }) {
   return (
     <>
-      <Header navigation={navigation} />
       <View style={styles.wrapper}>
         {/* ✅ Watermark Logo */}
         <Image
@@ -170,8 +167,6 @@ export default function PrivacyPolicies({ navigation }) {
           <Text style={styles.footer}>
             © {new Date().getFullYear()} All Rights Reserved
           </Text>
-          
-          <Footer navigation={navigation} />
         </ScrollView>
       </View>
     </>

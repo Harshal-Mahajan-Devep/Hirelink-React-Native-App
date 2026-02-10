@@ -6,6 +6,11 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import android.content.Context
+
 
 class MainApplication : Application(), ReactApplication {
 
@@ -20,8 +25,24 @@ class MainApplication : Application(), ReactApplication {
     )
   }
 
-  override fun onCreate() {
-    super.onCreate()
-    loadReactNative(this)
+ override fun onCreate() {
+  super.onCreate()
+
+  // 🔔 Notification Channel (Android 8+)
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    val channel = NotificationChannel(
+      "default", // ⚠️ Channel ID
+      "Hirelink Notifications",
+      NotificationManager.IMPORTANCE_HIGH
+    )
+    channel.description = "Hirelink app notifications"
+
+    val manager =
+      getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    manager.createNotificationChannel(channel)
   }
+
+  loadReactNative(this)
+}
+
 }

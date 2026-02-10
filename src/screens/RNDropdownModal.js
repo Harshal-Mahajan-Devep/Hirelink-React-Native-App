@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,100 +7,116 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
-} from "react-native";
+  Platform,
+} from 'react-native';
 
 export default function RNDropdownModal({
   label,
   value,
   options = [],
-  labelKey = "label",
-  valueKey = "value",
-  placeholder = "Select",
+  labelKey = 'label',
+  valueKey = 'value',
+  placeholder = 'Select',
   searchable = true,
   disabled = false,
   onChange,
 }) {
   const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState('');
 
   const selectedLabel = useMemo(() => {
-    if (!value) return "";
-    const found = options.find((x) => String(x[valueKey]) === String(value));
-    return found ? found[labelKey] : "";
+    if (!value) return '';
+    const found = options.find(x => String(x[valueKey]) === String(value));
+    return found ? found[labelKey] : '';
   }, [value, options, labelKey, valueKey]);
 
   const filtered = useMemo(() => {
     if (!searchable) return options;
     if (!q.trim()) return options;
-    return options.filter((x) =>
-      String(x[labelKey] || "")
+    return options.filter(x =>
+      String(x[labelKey] || '')
         .toLowerCase()
-        .includes(q.toLowerCase())
+        .includes(q.toLowerCase()),
     );
   }, [q, options, searchable, labelKey]);
 
   return (
-    <View style={{ marginTop: 10 }}>
+    <View style={{ marginTop: 12 }}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
 
+      {/* SELECT BOX */}
       <TouchableOpacity
+        activeOpacity={0.8}
         disabled={disabled}
         onPress={() => {
-          setQ("");
+          setQ('');
           setOpen(true);
         }}
-        style={[
-          styles.selectBox,
-          disabled ? { opacity: 0.45 } : null,
-        ]}
+        style={[styles.selectBox, disabled && styles.disabled]}
       >
-        <Text style={styles.selectText}>
+        <Text style={[styles.selectText, !selectedLabel && styles.placeholder]}>
           {selectedLabel || placeholder}
         </Text>
-        <Text style={styles.arrow}>▾</Text>
+        <Text style={styles.arrow}>⌄</Text>
       </TouchableOpacity>
 
-      <Modal visible={open} transparent animationType="fade">
+      {/* MODAL */}
+      <Modal visible={open} transparent animationType="slide">
         <View style={styles.backdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{label || "Select"}</Text>
+          <View style={styles.sheet}>
+            {/* HEADER */}
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>{label || 'Select option'}</Text>
               <TouchableOpacity onPress={() => setOpen(false)}>
                 <Text style={styles.close}>✕</Text>
               </TouchableOpacity>
             </View>
 
+            {/* SEARCH */}
             {searchable && (
               <TextInput
-                placeholder="Search..."
+                placeholder="Search"
+                placeholderTextColor={'#000000'}
                 value={q}
                 onChangeText={setQ}
-                style={styles.searchInput}
+                style={styles.search}
+                autoFocus
               />
             )}
 
+            {/* LIST */}
             <FlatList
               data={filtered}
-              keyExtractor={(item, index) =>
-                String(item[valueKey] ?? index)
-              }
-              style={{ maxHeight: 380 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.itemRow}
-                  onPress={() => {
-                    onChange?.(item[valueKey]);
-                    setOpen(false);
-                  }}
-                >
-                  <Text style={styles.itemText}>{item[labelKey]}</Text>
-                </TouchableOpacity>
-              )}
+              keyExtractor={(item, index) => String(item[valueKey] ?? index)}
+              renderItem={({ item }) => {
+                const isSelected = String(item[valueKey]) === String(value);
+
+                return (
+                  <TouchableOpacity
+                    style={[styles.row, isSelected && styles.rowActive]}
+                    onPress={() => {
+                      onChange?.(item[valueKey]);
+                      setOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.rowText,
+                        isSelected && styles.rowTextActive,
+                      ]}
+                    >
+                      {item[labelKey]}
+                    </Text>
+
+                    {isSelected && <Text style={styles.tick}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              }}
               ListEmptyComponent={
-                <Text style={{ textAlign: "center", padding: 14 }}>
-                  No results
-                </Text>
+                <Text style={styles.empty}>No results found</Text>
               }
+              style={{ maxHeight: 420 }}
+              showsVerticalScrollIndicator={false}
             />
           </View>
         </View>
@@ -109,70 +125,126 @@ export default function RNDropdownModal({
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   label: {
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: '800',
     marginBottom: 6,
-    color: "#111827",
+    color: '#111827',
   },
 
   selectBox: {
+    height: 48,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: '#d1d5db',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+  },
+
+  disabled: {
+    opacity: 0.5,
+    backgroundColor: '#f3f4f6',
   },
 
   selectText: {
-    color: "#111827",
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
 
-  arrow: { fontWeight: "900", color: "#6b7280" },
+  placeholder: {
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+
+  arrow: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#6b7280',
+  },
 
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "center",
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+
+  sheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
   },
 
-  modalCard: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 14,
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
 
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111827',
   },
 
-  modalTitle: { fontSize: 16, fontWeight: "900", color: "#111827" },
+  close: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#111827',
+  },
 
-  close: { fontSize: 18, fontWeight: "900" },
-
-  searchInput: {
+  search: {
+    height: 44,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: '#e5e7eb',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
+    marginBottom: 12,
+    fontSize: 14,
   },
 
-  itemRow: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: '#f1f5f9',
   },
 
-  itemText: { fontWeight: "700", color: "#111827" },
+  rowActive: {
+    backgroundColor: '#eef3ff',
+  },
+
+  rowText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  rowTextActive: {
+    color: '#2557a7',
+  },
+
+  tick: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#2557a7',
+  },
+
+  empty: {
+    textAlign: 'center',
+    paddingVertical: 20,
+    color: '#6b7280',
+    fontWeight: '700',
+  },
 });

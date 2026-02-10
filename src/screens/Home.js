@@ -1,66 +1,41 @@
 import React, { useEffect, useState } from 'react';
-import Header from './Header';
-import Footer from './Footer';
-
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import Header from './Header';
+import FooterMenu from './Footer';
 import JobSearchBar from './JobSearchBar';
 import { BASE_URL } from '../config/constants';
 
 export default function Home({ navigation }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [isLogin, setIsLogin] = useState(false);
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchPlace, setSearchPlace] = useState('');
-
   const [appliedKeyword, setAppliedKeyword] = useState('');
   const [appliedPlace, setAppliedPlace] = useState('');
 
-  // ✅ Fetch Jobs
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const res = await axios.get(`${BASE_URL}candidate/getdata/tbl_job`);
-
-        if (res.data.status === 'success') {
-          setJobs(res.data.data || []);
-        } else {
-          setJobs([]);
-        }
-      } catch (error) {
-        console.log('API Error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchJobs();
+    axios
+      .get(`${BASE_URL}candidate/getdata/tbl_job`)
+      .then(res => setJobs(res.data?.data || []))
+      .finally(() => setLoading(false));
   }, []);
 
-  // ✅ Check Candidate Login
   useEffect(() => {
-    const checkLogin = async () => {
-      const user = await AsyncStorage.getItem('candidate');
-      setIsLogin(!!user);
-    };
-
-    checkLogin();
+    AsyncStorage.getItem('candidate').then(u => setIsLogin(!!u));
   }, []);
 
-  // ✅ Search Action
   const onSearch = () => {
     navigation.navigate('Jobs', {
       keyword: appliedKeyword || searchKeyword,
@@ -72,130 +47,89 @@ export default function Home({ navigation }) {
     <>
       <Header navigation={navigation} />
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* SEARCH BAR */}
-        <View style={styles.searchWrapper}>
-          <JobSearchBar
-            jobs={jobs}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            searchPlace={searchPlace}
-            setSearchPlace={setSearchPlace}
-            appliedKeyword={appliedKeyword}
-            setAppliedKeyword={setAppliedKeyword}
-            appliedPlace={appliedPlace}
-            setAppliedPlace={setAppliedPlace}
-            onSearch={onSearch}
-          />
+      <ScrollView style={styles.page}>
+        {/* HERO */}
+        <View style={styles.hero}>
+          <Text style={styles.title}>Find your next opportunity</Text>
+          <Text style={styles.subtitle}>
+            Search jobs from top companies across India
+          </Text>
+
+          <View style={styles.searchCard}>
+            <JobSearchBar
+              jobs={jobs}
+              searchKeyword={searchKeyword}
+              setSearchKeyword={setSearchKeyword}
+              searchPlace={searchPlace}
+              setSearchPlace={setSearchPlace}
+              appliedKeyword={appliedKeyword}
+              setAppliedKeyword={setAppliedKeyword}
+              appliedPlace={appliedPlace}
+              setAppliedPlace={setAppliedPlace}
+              onSearch={onSearch}
+            />
+          </View>
         </View>
 
-        {/* MAIN TITLE */}
-        <Text style={styles.mainTitle}>Your next job starts here</Text>
-
-        <Text style={styles.subTitle}>
-          Create an account or sign in to see your personalised job
-          recommendations.
-        </Text>
-
-        {/* LOADING */}
         {loading ? (
-          <ActivityIndicator size="large" style={{ marginTop: 18 }} />
+          <ActivityIndicator size="large" style={{ marginTop: 30 }} />
         ) : (
-          <>
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={() => {
-                if (isLogin) navigation.navigate('Jobs');
-                else navigation.navigate('Signin');
-              }}
-            >
-              <Text style={styles.startBtnText}>Get Started →</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ marginTop: 30 }}
-              onPress={() => {
-                if (isLogin) navigation.navigate('Profile');
-                else navigation.navigate('Signin');
-              }}
-            >
-              <Text style={styles.resumeText}>
-                <Text style={styles.resumeLink}>Post your resume</Text> - It
-                only takes a few seconds
-              </Text>
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity
+            style={styles.cta}
+            onPress={() =>
+              isLogin
+                ? navigation.navigate('Jobs')
+                : navigation.navigate('Signin')
+            }
+          >
+            <Text style={styles.ctaText}>Get started</Text>
+          </TouchableOpacity>
         )}
-
-        <Footer navigation={navigation} />
       </ScrollView>
+      <FooterMenu navigation={navigation} active="Home" />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
+  page: {
+    backgroundColor: '#f5f7fb',
   },
-
-  content: {
-    flexGrow: 1,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  hero: {
+    padding: 20,
+    paddingTop: 30,
+    backgroundColor: '#f5f7fb',
   },
-
-  searchWrapper: {
-    width: '100%',
-    maxWidth: 720,
-    marginTop: 12,
-    marginBottom: 22,
-  },
-
-  mainTitle: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#2d2d2d',
+  title: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111',
     textAlign: 'center',
-    marginBottom: 10,
-    paddingHorizontal: 10,
   },
-
-  subTitle: {
-    color: '#555',
-    fontSize: 15,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 22,
-  },
-
-  startBtn: {
-    backgroundColor: '#ffd60a',
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 10,
-    marginTop: 18,
-  },
-
-  startBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#000',
-  },
-
-  resumeText: {
+  subtitle: {
     fontSize: 13,
+    color: '#555',
+    marginTop: 6,
     textAlign: 'center',
-    color: '#333',
   },
-
-  resumeLink: {
-    color: '#00b341',
+  searchCard: {
+    marginTop: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 10,
+    elevation: 4,
+  },
+  cta: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    backgroundColor: '#2557a7',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  ctaText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '800',
   },
 });
