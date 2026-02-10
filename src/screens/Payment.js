@@ -99,6 +99,9 @@ export default function Payment({ navigation }) {
             await AsyncStorage.setItem(
               'paymentDetails',
               JSON.stringify({
+                email: user.email,
+                mobile: user.mobile,
+                name: user.name,
                 paymentId: response.razorpay_payment_id,
                 orderId: response.razorpay_order_id,
                 amount: displayAmount,

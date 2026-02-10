@@ -82,6 +82,20 @@ export default function Notification({ navigation }) {
     });
     return unsubscribe;
   }, []);
+  
+  const NotificationSkeleton = () => (
+    <View style={[styles.item, { opacity: 0.6 }]}>
+      <View style={styles.skelIcon} />
+
+      <View style={{ flex: 1 }}>
+        <View style={styles.skelTitle} />
+        <View style={styles.skelMsg} />
+        <View style={styles.skelMsgShort} />
+      </View>
+
+      <View style={styles.skelTime} />
+    </View>
+  );
 
   /* ================= RENDER ================= */
   const renderItem = ({ item }) => {
@@ -132,9 +146,16 @@ export default function Notification({ navigation }) {
 
       {/* LIST */}
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" />
-        </View>
+        <FlatList
+          data={Array.from({ length: 6 })}
+          keyExtractor={(_, i) => `skeleton-${i}`}
+          renderItem={() => <NotificationSkeleton />}
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: 100,
+          }}
+          showsVerticalScrollIndicator={false}
+        />
       ) : notifications.length === 0 ? (
         <View style={styles.center}>
           <Text style={{ color: '#6b7280' }}>No notifications yet</Text>
@@ -247,5 +268,41 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 999,
     backgroundColor: '#2557a7',
+  },
+  skelIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#e5e7eb',
+  },
+
+  skelTitle: {
+    height: 14,
+    width: '70%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+
+  skelMsg: {
+    height: 12,
+    width: '100%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+
+  skelMsgShort: {
+    height: 12,
+    width: '60%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+  },
+
+  skelTime: {
+    width: 40,
+    height: 10,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
   },
 });

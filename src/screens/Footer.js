@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 export default function FooterMenu({ navigation, active }) {
   const tabs = [
     { name: 'Home', route: 'Jobs', icon: '🏠' },
-    { name: 'My jobs', route: 'MyJobs', icon: '💾' },
+    { name: 'My jobs', route: 'MyJobs', icon: '💼' },
     { name: 'Notifications', route: 'Notification', icon: '🔔' },
     { name: 'Profile', route: 'Profile', icon: '👤' },
   ];

@@ -7,7 +7,12 @@ import {
   Animated,
   Pressable,
 } from 'react-native';
+import axios from 'axios';
+import RNPrint from 'react-native-print';
+import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getReceiptHTML } from '../screens/receiptTemplate';
+import { BASE_URL } from '../config/constants';
 
 export default function RightSidebar({ visible, onClose, navigation }) {
   const slideX = useRef(new Animated.Value(300)).current;
@@ -37,6 +42,68 @@ export default function RightSidebar({ visible, onClose, navigation }) {
     </TouchableOpacity>
   );
 
+  const downloadReceipt = async () => {
+    try {
+      // 1️⃣ Candidate data
+      const candidate = JSON.parse(await AsyncStorage.getItem('candidate'));
+
+      if (!candidate?.can_email) {
+        Toast.show({
+          type: 'error',
+          text1: 'Please login again',
+        });
+        return;
+      }
+
+      // 2️⃣ Fetch payment using email
+      const res = await axios.post(`${BASE_URL}admin/getdatawhere`, {
+        table: 'tbl_payments',
+        column: 'pay_email',
+        value: candidate.can_email,
+        orderby: 'created_at DESC',
+        limit: 1,
+      });
+
+      const pay = res.data?.data?.[0];
+      if (!pay) {
+        Toast.show({
+          type: 'error',
+          text1: 'No payment record found',
+        });
+        return;
+      }
+
+      // 3️⃣ Prepare payment object
+      const payment = {
+        name: candidate.can_name,
+        mobile: candidate.can_mobile,
+        email: candidate.can_email,
+        paymentId: pay.razorpay_payment_id,
+        orderId: pay.razorpay_order_id,
+        amount: pay.pay_amount,
+        date: pay.created_at,
+        role: pay.pay_role,
+        paymentFor: pay.pay_for,
+      };
+
+      // 4️⃣ Generate HTML receipt
+      const html = getReceiptHTML(payment);
+
+      // 5️⃣ Print / Download PDF
+      await RNPrint.print({ html });
+
+      Toast.show({
+        type: 'success',
+        text1: 'Receipt downloaded successfully',
+      });
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Receipt download failed',
+      });
+    }
+  };
+
   if (!visible) return null;
 
   return (
@@ -48,7 +115,7 @@ export default function RightSidebar({ visible, onClose, navigation }) {
       >
         <Text style={styles.title}>Menu</Text>
 
-        <MenuItem label="🏠 Home" screen="Home" />
+        <MenuItem label="🏠 Home" screen="Jobs" />
         <MenuItem label="💼 My Jobs" screen="MyJobs" />
         <MenuItem label="🔔 Notifications" screen="Notification" />
         <MenuItem label="🏢 Companies" screen="Company" />
@@ -58,6 +125,9 @@ export default function RightSidebar({ visible, onClose, navigation }) {
         <MenuItem label="📜 Terms & Conditions" screen="Terms" />
         <MenuItem label="♻️ Return Policy" screen="ReturnPolicy" />
         <MenuItem label="🔐 Privacy Policy" screen="PrivacyPolicies" />
+        <TouchableOpacity style={styles.item} onPress={downloadReceipt}>
+          <Text style={styles.itemText}>🧾 Download Receipt</Text>
+        </TouchableOpacity>
 
         {/* <View style={styles.divider} /> */}
 

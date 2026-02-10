@@ -5,7 +5,7 @@ import {
   View,
   Text,
   StyleSheet,
-//   Image,
+  //   Image,
   ScrollView,
   Dimensions,
 } from 'react-native';
@@ -118,8 +118,8 @@ export default function AboutScreen({ navigation }) {
             </Text>
           </View>
         </View>
-        <Footer navigation={navigation} />
       </ScrollView>
+      <Footer navigation={navigation} />
     </>
   );
 }

@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
+import { pick, types } from '@react-native-documents/picker';
 import Header from './Header';
 import Footer from './Footer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +32,8 @@ export default function ApplyJobScreen({ route, navigation }) {
 
   const [showEduType, setShowEduType] = useState(false);
   const [showEduDetail, setShowEduDetail] = useState(false);
+
+  const [resumeUploaded, setResumeUploaded] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -99,6 +102,8 @@ export default function ApplyJobScreen({ route, navigation }) {
       experience: cand.can_experience || '',
       skills: cand.can_skill || '',
     }));
+
+    setResumeUploaded(!!cand.can_resume);
   };
 
   /* ===== ALREADY APPLIED ===== */
@@ -193,13 +198,59 @@ export default function ApplyJobScreen({ route, navigation }) {
     }
   };
 
+  const uploadResume = async () => {
+    try {
+      const file = await pick({
+        type: [types.pdf],
+      });
+
+      const formData = new FormData();
+      formData.append('can_resume', {
+        uri: file[0].uri,
+        name: file[0].name || 'resume.pdf',
+        type: file[0].type || 'application/pdf',
+      });
+
+      const res = await axios.post(
+        `${BASE_URL}candidate/fileupload`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+
+      if (res.data?.status) {
+        const cand = JSON.parse(await AsyncStorage.getItem('candidate'));
+
+        const updated = {
+          ...cand,
+          can_resume: res.data.files.can_resume,
+        };
+
+        await AsyncStorage.setItem('candidate', JSON.stringify(updated));
+
+        setResumeUploaded(true);
+
+        Toast.show({
+          type: 'success',
+          text1: 'Resume uploaded successfully ✅',
+        });
+      } else {
+        Toast.show({ type: 'error', text1: 'Resume upload failed' });
+      }
+    } catch (e) {
+      if (e?.code !== 'DOCUMENT_PICKER_CANCELED') {
+        Toast.show({ type: 'error', text1: 'Resume upload failed' });
+      }
+    }
+  };
+
   /* ================= UI ================= */
   return (
     <>
       <Header navigation={navigation} />
       <ScrollView
         contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
+        nestedScrollEnabled={true}
       >
         {/* ===== JOB DETAIL CARD (WEB LIKE) ===== */}
         {job && (
@@ -251,6 +302,12 @@ export default function ApplyJobScreen({ route, navigation }) {
           />
         )}
 
+        <Pressable style={styles.uploadBtn} onPress={uploadResume}>
+          <Text style={styles.uploadText}>
+            {resumeUploaded ? 'Resume Uploaded ✅' : 'Upload Resume (PDF)'}
+          </Text>
+        </Pressable>
+
         <TextInput
           style={styles.input}
           placeholder="Experience"
@@ -290,7 +347,7 @@ export default function ApplyJobScreen({ route, navigation }) {
       <Modal transparent visible={showEduType}>
         <Pressable
           style={styles.modalOverlay}
-          onPress={() => setShowEduType(false)}
+          onPressOut={() => setShowEduType(false)}
         >
           <View style={styles.modalBox}>
             {['Diploma', 'Graduation', 'Post Graduation', 'Other'].map(item => (
@@ -331,7 +388,7 @@ export default function ApplyJobScreen({ route, navigation }) {
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: { padding: 16 },
+  container: { padding: 16, minHeight: '110%' },
 
   /* JOB CARD */
   jobCard: {
@@ -402,5 +459,20 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
+  },
+  uploadBtn: {
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderColor: '#d1d5db',
+    borderWidth: 1,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+
+  uploadText: {
+    color: '#000000',
+    fontWeight: '900',
   },
 });

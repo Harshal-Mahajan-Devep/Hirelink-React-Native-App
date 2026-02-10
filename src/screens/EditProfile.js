@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { Platform } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 import Header from './Header';
 import FooterMenu from './Footer';
@@ -26,6 +29,7 @@ export default function EditProfile({ navigation }) {
 
   const [isAadharLocked, setIsAadharLocked] = useState(false);
   const [isPanLocked, setIsPanLocked] = useState(false);
+  const [isCategorySynced, setIsCategorySynced] = useState(false);
 
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
@@ -58,12 +62,14 @@ export default function EditProfile({ navigation }) {
       navigation.navigate('Signin');
       return;
     }
+
     const cand = JSON.parse(stored);
     setCandidate(cand);
 
     setIsAadharLocked((cand.can_aadhar || '').length === 12);
     setIsPanLocked((cand.can_pan || '').length === 10);
 
+    // ✅ SET VALUES
     setSelectedCategory(cand.can_mc || '');
     setSelectedSubCategory(cand.can_sc || '');
     setSelectedSubCat1(cand.can_sc1 || '');
@@ -72,6 +78,22 @@ export default function EditProfile({ navigation }) {
 
     setEducationType(cand.can_education_type || '');
     setEducationDetail(cand.can_education_detail || '');
+
+    // ✅ FETCH DROPDOWN DATA IN ORDER (IMPORTANT)
+    if (cand.can_mc) {
+      await fetchSubCategories(cand.can_mc);
+    }
+    if (cand.can_sc) {
+      await fetchSubCat1(cand.can_sc);
+    }
+    if (cand.can_sc1) {
+      await fetchSubCat2(cand.can_sc1);
+    }
+    if (cand.can_sc2) {
+      await fetchSubCat3(cand.can_sc2);
+    }
+
+    setIsCategorySynced(true); // AFTER EVERYTHING
   };
 
   /* ================= API LOAD ================= */
@@ -94,6 +116,94 @@ export default function EditProfile({ navigation }) {
     setCategories(res.data?.data || []);
   };
 
+  const fetchSubCategories = async mcId => {
+    const res = await axios.get(
+      `${BASE_URL}candidate/getdatawhere/tbl_subcategory/sc_mc_id/${mcId}`,
+    );
+    setSubCategories(res.data?.data || []);
+  };
+
+  const fetchSubCat1 = async scId => {
+    const res = await axios.get(
+      `${BASE_URL}candidate/getdatawhere/tbl_subcategory_1/sc1_sc_id/${scId}`,
+    );
+    setSubCat1(res.data?.data || []);
+  };
+
+  const fetchSubCat2 = async sc1Id => {
+    const res = await axios.get(
+      `${BASE_URL}candidate/getdatawhere/tbl_subcategory_2/sc2_sc1_id/${sc1Id}`,
+    );
+    setSubCat2(res.data?.data || []);
+  };
+
+  const fetchSubCat3 = async sc2Id => {
+    const res = await axios.get(
+      `${BASE_URL}candidate/getdatawhere/tbl_subcategory_3/sc3_sc2_id/${sc2Id}`,
+    );
+    setSubCat3(res.data?.data || []);
+  };
+
+  /* ================= CATEGORY CASCADE ================= */
+
+  // Main Category → Sub Category
+  useEffect(() => {
+    if (!isCategorySynced) return; // ✅ BLOCK FIRST LOAD
+
+    if (selectedCategory) {
+      fetchSubCategories(selectedCategory);
+    } else {
+      setSubCategories([]);
+    }
+
+    setSelectedSubCategory('');
+    setSelectedSubCat1('');
+    setSelectedSubCat2('');
+    setSelectedSubCat3('');
+  }, [selectedCategory]);
+
+  // Sub Category → SubCat1
+  useEffect(() => {
+    if (!isCategorySynced) return;
+
+    if (selectedSubCategory) {
+      fetchSubCat1(selectedSubCategory);
+    } else {
+      setSubCat1([]);
+    }
+
+    setSelectedSubCat1('');
+    setSelectedSubCat2('');
+    setSelectedSubCat3('');
+  }, [selectedSubCategory]);
+
+  // SubCat1 → SubCat2
+  useEffect(() => {
+    if (!isCategorySynced) return;
+
+    if (selectedSubCat1) {
+      fetchSubCat2(selectedSubCat1);
+    } else {
+      setSubCat2([]);
+    }
+
+    setSelectedSubCat2('');
+    setSelectedSubCat3('');
+  }, [selectedSubCat1]);
+
+  // SubCat2 → SubCat3
+  useEffect(() => {
+    if (!isCategorySynced) return;
+
+    if (selectedSubCat2) {
+      fetchSubCat3(selectedSubCat2);
+    } else {
+      setSubCat3([]);
+    }
+
+    setSelectedSubCat3('');
+  }, [selectedSubCat2]);
+
   /* ================= INIT ================= */
   useEffect(() => {
     (async () => {
@@ -112,14 +222,22 @@ export default function EditProfile({ navigation }) {
     if (!candidate?.can_id) return;
 
     if (!candidate.can_aadhar || candidate.can_aadhar.length !== 12) {
-      Alert.alert('Error', 'Aadhar must be 12 digits');
-      return;
-    }
-    if (!candidate.can_pan || candidate.can_pan.length !== 10) {
-      Alert.alert('Error', 'PAN must be 10 characters');
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Aadhar',
+        text2: 'Aadhar must be exactly 12 digits',
+      });
       return;
     }
 
+    if (!candidate.can_pan || candidate.can_pan.length !== 10) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid PAN',
+        text2: 'PAN must be exactly 10 characters',
+      });
+      return;
+    }
     setBtnLoading(true);
 
     try {
@@ -147,17 +265,25 @@ export default function EditProfile({ navigation }) {
       );
 
       if (res.data?.status) {
-        await AsyncStorage.setItem(
-          'candidate',
-          JSON.stringify({ ...candidate, ...payload }),
-        );
-        Alert.alert('Success', 'Profile updated successfully');
+        Toast.show({
+          type: 'success',
+          text1: 'Profile updated',
+          text2: 'Your profile was updated successfully',
+        });
         navigation.goBack();
       } else {
-        Alert.alert('Error', 'Update failed');
+        Toast.show({
+          type: 'error',
+          text1: 'Update failed',
+          text2: 'Please try again',
+        });
       }
     } catch (e) {
-      Alert.alert('Error', 'Server error');
+      Toast.show({
+        type: 'error',
+        text1: 'Server error',
+        text2: 'Something went wrong. Try again later',
+      });
     } finally {
       setBtnLoading(false);
     }
@@ -178,6 +304,94 @@ export default function EditProfile({ navigation }) {
           label: x,
           value: x,
         }));
+
+  const uploadProfileImage = async () => {
+    try {
+      const res = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 1,
+      });
+
+      if (!res || res.didCancel || !res.assets?.length) return;
+
+      const file = res.assets[0];
+
+      const formData = new FormData();
+      formData.append('can_image', {
+        uri:
+          Platform.OS === 'android'
+            ? file.uri
+            : file.uri.replace('file://', ''),
+        name: 'profile.jpg',
+        type: file.type || 'image/jpeg',
+      });
+
+      const uploadRes = await axios.post(
+        `${BASE_URL}candidate/fileupload`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+
+      if (uploadRes.data?.status) {
+        setCandidate(p => ({
+          ...p,
+          can_image: uploadRes.data.files.can_image,
+        }));
+        Toast.show({
+          type: 'success',
+          text1: 'Profile image uploaded',
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Image upload failed',
+        });
+      }
+    } catch (e) {
+      console.log('IMAGE UPLOAD ERROR:', e);
+      Alert.alert('Error', 'Profile image upload failed');
+    }
+  };
+
+  const uploadPDF = async fieldName => {
+    try {
+      const file = await pick({
+        type: [types.pdf],
+      });
+
+      const formData = new FormData();
+      formData.append(fieldName, {
+        uri: file[0].uri,
+        name: file[0].name || `${fieldName}.pdf`,
+        type: file[0].type || 'application/pdf',
+      });
+
+      const uploadRes = await axios.post(
+        `${BASE_URL}candidate/fileupload`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+
+      if (uploadRes.data?.status) {
+        setCandidate(p => ({
+          ...p,
+          [fieldName]: uploadRes.data.files[fieldName],
+        }));
+
+        Toast.show({
+          type: 'success',
+          text1: fieldName === 'can_resume' ? 'Resume uploaded' : 'CV uploaded',
+        });
+      }
+    } catch (e) {
+      if (e?.code !== 'DOCUMENT_PICKER_CANCELED') {
+        Toast.show({
+          type: 'error',
+          text1: 'PDF upload failed',
+        });
+      }
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f3f6fb' }}>
@@ -285,6 +499,39 @@ export default function EditProfile({ navigation }) {
           )}
         </View>
 
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.uploadBtn}
+            onPress={uploadProfileImage}
+          >
+            <Text style={styles.uploadText}>
+              {candidate.can_image
+                ? 'Profile Image Uploaded ✅'
+                : 'Upload Profile Image'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.uploadBtn}
+            onPress={() => uploadPDF('can_resume')}
+          >
+            <Text style={styles.uploadText}>
+              {candidate.can_resume
+                ? 'Resume Uploaded ✅'
+                : 'Upload Resume (PDF)'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.uploadBtn}
+            onPress={() => uploadPDF('can_cv')}
+          >
+            <Text style={styles.uploadText}>
+              {candidate.can_cv ? 'CV Uploaded ✅' : 'Upload CV (PDF)'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* ABOUT */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>About you</Text>
@@ -313,6 +560,85 @@ export default function EditProfile({ navigation }) {
             multiline
             style={[styles.input, { height: 100 }]}
             onChangeText={t => setCandidate(p => ({ ...p, can_about: t }))}
+          />
+        </View>
+        <View style={styles.card}>
+          <RNDropdownModal
+            label="Category"
+            value={selectedCategory}
+            options={categories}
+            labelKey="mc_name"
+            valueKey="mc_id"
+            placeholder="Select Category"
+            onChange={setSelectedCategory}
+          />
+
+          <RNDropdownModal
+            label="Sub Category"
+            value={selectedSubCategory}
+            options={subCategories}
+            labelKey="sc_name"
+            valueKey="sc_id"
+            placeholder={
+              !selectedCategory
+                ? 'Select category first'
+                : subCategories.length === 0
+                ? 'No sub categories'
+                : 'Select Sub Category'
+            }
+            disabled={!selectedCategory || subCategories.length === 0}
+            onChange={setSelectedSubCategory}
+          />
+
+          <RNDropdownModal
+            label="Sub Category 1"
+            value={selectedSubCat1}
+            options={subCat1}
+            labelKey="sc1_name"
+            valueKey="sc1_id"
+            placeholder={
+              !selectedSubCategory
+                ? 'Select Sub Category first'
+                : subCat1.length === 0
+                ? 'No sub category available'
+                : 'Select Sub Category 1'
+            }
+            disabled={!selectedSubCategory || subCat1.length === 0}
+            onChange={setSelectedSubCat1}
+          />
+
+          <RNDropdownModal
+            label="Sub Category 2"
+            value={selectedSubCat2}
+            options={subCat2}
+            labelKey="sc2_name"
+            valueKey="sc2_id"
+            placeholder={
+              !selectedSubCat1
+                ? 'Select previous category first'
+                : subCat2.length === 0
+                ? 'No sub category available'
+                : 'Select Sub Category 2'
+            }
+            disabled={!selectedSubCat1 || subCat2.length === 0}
+            onChange={setSelectedSubCat2}
+          />
+
+          <RNDropdownModal
+            label="Sub Category 3"
+            value={selectedSubCat3}
+            options={subCat3}
+            labelKey="sc3_name"
+            valueKey="sc3_id"
+            placeholder={
+              !selectedSubCat2
+                ? 'Select previous category first'
+                : subCat3.length === 0
+                ? 'No sub category available'
+                : 'Select Sub Category 3'
+            }
+            disabled={!selectedSubCat2 || subCat3.length === 0}
+            onChange={setSelectedSubCat3}
           />
         </View>
 
@@ -380,7 +706,7 @@ const styles = StyleSheet.create({
   },
 
   saveBtn: {
-    backgroundColor: '#2557a7',
+    backgroundColor: '#08831c',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -389,6 +715,20 @@ const styles = StyleSheet.create({
 
   saveText: {
     color: '#fff',
+    fontWeight: '900',
+  },
+  uploadBtn: {
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderColor: '#d1d5db',
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+
+  uploadText: {
+    color: '#000000',
     fontWeight: '900',
   },
 });

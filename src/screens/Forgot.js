@@ -25,7 +25,6 @@ const validationSchema = Yup.object({
   email: Yup.string()
     .email('Enter valid email address')
     .required('Email is required'),
-  user_type: Yup.string().required('Please select user type'),
 });
 
 export default function Forgot() {
@@ -39,7 +38,7 @@ export default function Forgot() {
     resolver: yupResolver(validationSchema),
     defaultValues: {
       email: '',
-      user_type: '',
+      user_type: 'candidate',
     },
   });
 
@@ -118,40 +117,7 @@ export default function Forgot() {
               <Text style={styles.error}>{errors.email.message}</Text>
             )}
           </View>
-
-          {/* USER TYPE */}
-          <View style={[styles.field, { textAlign: 'left' }]}>
-            <Text style={styles.label}>Account type</Text>
-
-            <Controller
-              control={control}
-              name="user_type"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.radioRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.radioBox,
-                      value === 'candidate' && styles.radioActive,
-                    ]}
-                    onPress={() => onChange('candidate')}
-                  >
-                    <Text
-                      style={[
-                        styles.radioText,
-                        value === 'candidate' && styles.radioTextActive,
-                      ]}
-                    >
-                      Candidate
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-
-            {errors.user_type && (
-              <Text style={styles.error}>{errors.user_type.message}</Text>
-            )}
-          </View>
+          
 
           {/* SUBMIT */}
           <TouchableOpacity

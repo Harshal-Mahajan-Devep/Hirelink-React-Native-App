@@ -28,7 +28,8 @@ export default function Verify({ navigation }) {
   const [emailTimer, setEmailTimer] = useState(0);
   const [mobileTimer, setMobileTimer] = useState(0);
 
-  const [loading, setLoading] = useState(false);
+  const [mobileLoading, setMobileLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -42,6 +43,19 @@ export default function Verify({ navigation }) {
 
       setEmail(verifyUser.email);
       setMobile(verifyUser.mobile);
+
+      const mTime = await AsyncStorage.getItem('mobileOtpTime');
+      const eTime = await AsyncStorage.getItem('emailOtpTime');
+
+      if (mTime) {
+        const diff = Math.floor((Date.now() - Number(mTime)) / 1000);
+        if (diff < RESEND_TIME) setMobileTimer(RESEND_TIME - diff);
+      }
+
+      if (eTime) {
+        const diff = Math.floor((Date.now() - Number(eTime)) / 1000);
+        if (diff < RESEND_TIME) setEmailTimer(RESEND_TIME - diff);
+      }
     })();
   }, []);
 
@@ -65,36 +79,97 @@ export default function Verify({ navigation }) {
 
   /* ================= VERIFY ================= */
   const verifyMobileOtp = async () => {
-    if (mobileOtp.length !== 6) return;
-    setLoading(true);
+    if (mobileOtp.length !== 6) {
+      Toast.show({ type: 'error', text1: 'Enter valid 6 digit OTP' });
+      return;
+    }
+
+    setMobileLoading(true);
     try {
       const res = await axios.post(`${BASE_URL}candidate/verifyMobileOtp`, {
         can_mobile: mobile,
-        otp: mobileOtp,
+        otp: Number(mobileOtp), // ✅ FIX
       });
-      if (res.data?.status) {
-        setMobileVerified(true);
+
+      if (res.data?.status === true) {
         Toast.show({ type: 'success', text1: 'Mobile verified' });
+        setMobileVerified(true);
+        await AsyncStorage.removeItem('mobileOtpTime');
+        setMobileTimer(0);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: res.data?.message || 'Invalid OTP',
+        });
       }
+    } catch (err) {
+      Toast.show({ type: 'error', text1: 'Server error' });
     } finally {
-      setLoading(false);
+      setMobileLoading(false);
     }
   };
 
   const verifyEmailOtp = async () => {
-    if (emailOtp.length !== 6) return;
-    setLoading(true);
+    if (emailOtp.length !== 6) {
+      Toast.show({ type: 'error', text1: 'Enter valid 6 digit OTP' });
+      return;
+    }
+
+    setEmailLoading(true);
     try {
       const res = await axios.post(`${BASE_URL}candidate/verifyEmailOtp`, {
         can_email: email,
-        otp: emailOtp,
+        otp: Number(emailOtp), // ✅ FIX
       });
-      if (res.data?.status) {
-        setEmailVerified(true);
+
+      if (res.data?.status === true) {
         Toast.show({ type: 'success', text1: 'Email verified' });
+        setEmailVerified(true);
+        await AsyncStorage.removeItem('emailOtpTime');
+        setEmailTimer(0);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: res.data?.message || 'Invalid OTP',
+        });
       }
+    } catch {
+      Toast.show({ type: 'error', text1: 'Server error' });
     } finally {
-      setLoading(false);
+      setEmailLoading(false);
+    }
+  };
+
+  /* ================= RESEND OTP ================= */
+  const resendMobileOtp = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}candidate/resendMobileOtp`, {
+        can_mobile: mobile,
+      });
+
+      if (res.data?.status) {
+        Toast.show({ type: 'success', text1: 'OTP resent to mobile' });
+        await AsyncStorage.setItem('mobileOtpTime', Date.now().toString());
+        setMobileTimer(RESEND_TIME);
+      }
+    } catch {
+      Toast.show({ type: 'error', text1: 'Server error' });
+    }
+  };
+
+  const resendEmailOtp = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}candidate/resendOtp`, {
+        can_email: email,
+      });
+
+      if (res.data?.status) {
+        Toast.show({ type: 'success', text1: 'OTP resent to email' });
+        await AsyncStorage.setItem('emailOtpTime', Date.now().toString());
+        setEmailTimer(RESEND_TIME);
+      }
+    } catch {
+      Toast.show({ type: 'error', text1: 'Server error' });
     }
   };
 
@@ -141,9 +216,9 @@ export default function Verify({ navigation }) {
             <TouchableOpacity
               style={[styles.verifyBtn, mobileVerified && styles.doneBtn]}
               onPress={verifyMobileOtp}
-              disabled={mobileVerified || loading}
+              disabled={mobileVerified || mobileLoading}
             >
-              {loading ? (
+              {mobileLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.verifyText}>
@@ -152,6 +227,19 @@ export default function Verify({ navigation }) {
               )}
             </TouchableOpacity>
           </View>
+          {!mobileVerified && (
+            <View style={styles.resendWrap}>
+              {mobileTimer > 0 ? (
+                <Text style={styles.timerText}>
+                  Resend OTP in {mobileTimer}s
+                </Text>
+              ) : (
+                <TouchableOpacity onPress={resendMobileOtp}>
+                  <Text style={styles.resendText}>Send new code</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
         {/* EMAIL CARD */}
@@ -173,13 +261,30 @@ export default function Verify({ navigation }) {
             <TouchableOpacity
               style={[styles.verifyBtn, emailVerified && styles.doneBtn]}
               onPress={verifyEmailOtp}
-              disabled={emailVerified || loading}
+              disabled={emailVerified || emailLoading}
             >
-              <Text style={styles.verifyText}>
-                {emailVerified ? '✓ Done' : 'Verify'}
-              </Text>
+              {emailLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.verifyText}>
+                  {emailVerified ? '✓ Done' : 'Verify'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
+          {!emailVerified && (
+            <View style={styles.resendWrap}>
+              {emailTimer > 0 ? (
+                <Text style={styles.timerText}>
+                  Resend OTP in {emailTimer}s
+                </Text>
+              ) : (
+                <TouchableOpacity onPress={resendEmailOtp}>
+                  <Text style={styles.resendText}>Send new code</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
         {/* FINAL CTA */}
@@ -296,6 +401,22 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 12,
     color: '#6b7280',
+    fontWeight: '600',
+  },
+  resendWrap: {
+    marginTop: 6,
+    alignItems: 'center',
+  },
+
+  resendText: {
+    color: '#2563eb',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+
+  timerText: {
+    color: '#6b7280',
+    fontSize: 12,
     fontWeight: '600',
   },
 });

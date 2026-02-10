@@ -61,14 +61,13 @@ export default function Company({ navigation }) {
     setShowList(false);
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading companies…</Text>
-      </View>
-    );
-  }
+  const CompanySkeletonCard = () => (
+    <View style={[styles.companyCard, { opacity: 0.6 }]}>
+      <View style={styles.skelLogo} />
+      <View style={styles.skelCompanyName} />
+      <View style={styles.skelViewJobs} />
+    </View>
+  );
 
   return (
     <>
@@ -125,22 +124,22 @@ export default function Company({ navigation }) {
         <Text style={styles.popularTitle}>Popular companies</Text>
 
         <FlatList
-          data={companiesToShow}
-          keyExtractor={(item, index) => String(index)}
+          data={loading ? Array.from({ length: 6 }) : companiesToShow}
+          keyExtractor={(item, index) =>
+            loading ? `skeleton-${index}` : String(index)
+          }
           numColumns={2}
           columnWrapperStyle={{ gap: 12 }}
           contentContainerStyle={{ paddingBottom: 30 }}
           ListEmptyComponent={
-            searchText ? (
+            !loading && searchText ? (
               <Text style={styles.noResult}>No companies found</Text>
             ) : null
           }
-          renderItem={({ item }) => {
-            const logoUrl = item.emp_com_logo
-              ? `${BASE_URL}Uploads/${item.emp_com_logo}`
-              : 'https://via.placeholder.com/100';
-
-            return (
+          renderItem={({ item }) =>
+            loading ? (
+              <CompanySkeletonCard />
+            ) : (
               <TouchableOpacity
                 style={styles.companyCard}
                 onPress={() =>
@@ -149,7 +148,14 @@ export default function Company({ navigation }) {
                   })
                 }
               >
-                <Image source={{ uri: logoUrl }} style={styles.logoImg} />
+                <Image
+                  source={{
+                    uri: item.emp_com_logo
+                      ? `${BASE_URL}Uploads/${item.emp_com_logo}`
+                      : 'https://via.placeholder.com/100',
+                  }}
+                  style={styles.logo}
+                />
 
                 <Text style={styles.companyName} numberOfLines={1}>
                   {item.emp_companyname}
@@ -157,8 +163,8 @@ export default function Company({ navigation }) {
 
                 <Text style={styles.viewJobs}>View jobs</Text>
               </TouchableOpacity>
-            );
-          }}
+            )
+          }
         />
       </View>
 
@@ -224,7 +230,7 @@ const styles = StyleSheet.create({
   },
 
   searchBtn: {
-    backgroundColor: '#2557a7',
+    backgroundColor: '#09852e',
     paddingHorizontal: 18,
     borderRadius: 12,
     justifyContent: 'center',
@@ -288,7 +294,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#6b7280',
     fontWeight: '600',
-  },  
+  },
 
   logo: {
     width: 110,
@@ -309,5 +315,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#2557a7',
+  },
+
+  skelLogo: {
+    width: 80,
+    height: 50,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+
+  skelCompanyName: {
+    height: 14,
+    width: '80%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+
+  skelViewJobs: {
+    height: 12,
+    width: '50%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
   },
 });

@@ -100,6 +100,18 @@ export default function Jobs({ navigation, route }) {
     </TouchableOpacity>
   );
 
+  const JobCardSkeleton = () => (
+    <View style={[styles.card, { opacity: 0.6 }]}>
+      <View style={styles.skelTitle} />
+      <View style={styles.skelCompany} />
+
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+        <View style={styles.skelChip} />
+        <View style={styles.skelChip} />
+      </View>
+    </View>
+  );
+
   return (
     <>
       <Header navigation={navigation} />
@@ -125,16 +137,14 @@ export default function Jobs({ navigation, route }) {
           {appliedKeyword ? `Jobs at ${appliedKeyword}` : 'Jobs for you'}
         </Text>
 
-        {loading ? (
-          <ActivityIndicator size="large" />
-        ) : (
-          <FlatList
-            data={filteredJobs}
-            keyExtractor={i => String(i.job_id)}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+        <FlatList
+          data={loading ? Array.from({ length: 6 }) : filteredJobs}
+          keyExtractor={(item, index) =>
+            loading ? `skeleton-${index}` : String(item.job_id)
+          }
+          renderItem={loading ? () => <JobCardSkeleton /> : renderItem}
+          showsVerticalScrollIndicator={false}
+        />
       </View>
 
       <FooterMenu navigation={navigation} active="Home" />
@@ -185,5 +195,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  skelTitle: {
+    height: 18,
+    width: '70%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  skelCompany: {
+    height: 14,
+    width: '50%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+  },
+  skelChip: {
+    height: 22,
+    width: 90,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 10,
   },
 });

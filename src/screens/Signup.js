@@ -203,8 +203,20 @@ export default function Signup({ navigation }) {
               {agree && <Text style={styles.tick}>✓</Text>}
             </View>
             <Text style={styles.termsText}>
-              I agree to Hirelink’s <Text style={styles.link}>Terms</Text> &{' '}
-              <Text style={styles.link}>Privacy Policy</Text>
+              I agree to Hirelink’s{' '}
+              <Text
+                style={styles.link}
+                onPress={() => navigation.navigate('Terms')}
+              >
+                Terms
+              </Text>{' '}
+              &{' '}
+              <Text
+                style={styles.link}
+                onPress={() => navigation.navigate('PrivacyPolicies')}
+              >
+                Privacy Policy
+              </Text>
             </Text>
           </TouchableOpacity>
 
@@ -249,8 +261,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   logo: {
-    width: 150,
-    height: 50,
+    width: 100,
+    height: 100,
     alignSelf: 'center',
     marginBottom: 12,
   },
@@ -314,7 +326,7 @@ const styles = StyleSheet.create({
     color: '#2557a7',
   },
   submitBtn: {
-    backgroundColor: '#2557a7',
+    backgroundColor: '#008311',
     height: 48,
     borderRadius: 999,
     justifyContent: 'center',

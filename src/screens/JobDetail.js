@@ -21,11 +21,13 @@ export default function JobDetail({ route, navigation }) {
 
   const [candidate, setCandidate] = useState(null);
   const [savedJobs, setSavedJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   /* ================= LOAD USER ================= */
   useEffect(() => {
     AsyncStorage.getItem('candidate').then(c => {
       if (c) setCandidate(JSON.parse(c));
+      setLoading(false);
     });
   }, []);
 
@@ -84,100 +86,125 @@ export default function JobDetail({ route, navigation }) {
 
   const isSaved = savedJobs.includes(Number(job.job_id));
 
+  const JobDetailSkeleton = () => (
+    <View style={{ padding: 16 }}>
+      <View style={styles.skelTopCard}>
+        <View style={styles.skelTitle} />
+        <View style={styles.skelSub} />
+        <View style={styles.skelSalary} />
+        <View style={styles.skelBtn} />
+      </View>
+
+      <View style={styles.skelCard}>
+        <View style={styles.skelLine} />
+        <View style={styles.skelLineWide} />
+        <View style={styles.skelLine} />
+        <View style={styles.skelLineWide} />
+      </View>
+    </View>
+  );
+
   return (
     <>
       <Header navigation={navigation} />
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ padding: 16, paddingBottom: 90 }}
-      >
-        {/* ===== TOP CARD (INDEED STYLE) ===== */}
-        <View style={styles.topCard}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.back}>← Back</Text>
-          </TouchableOpacity>
+      {loading ? (
+        <JobDetailSkeleton />
+      ) : (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ padding: 16, paddingBottom: 90 }}
+        >
+          {/* ===== TOP CARD (INDEED STYLE) ===== */}
+          <View style={styles.topCard}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.back}>← Back</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.saveBtn} onPress={toggleSaveJob}>
-            <Text style={{ fontSize: 22 }}>{isSaved ? '🔖' : '📑'}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.saveBtn} onPress={toggleSaveJob}>
+              <Text style={{ fontSize: 22 }}>{isSaved ? '🔖' : '📑'}</Text>
+            </TouchableOpacity>
 
-          <Text style={styles.title}>{job.job_title}</Text>
-          <Text style={styles.subText}>
-            {job.job_company} · {job.city_name}, {job.state_name}
-          </Text>
+            <Text style={styles.title}>{job.job_title}</Text>
+            <Text style={styles.subText}>
+              {job.job_company} · {job.city_name}, {job.state_name}
+            </Text>
 
-          {!!job.job_salary && (
-            <Text style={styles.salary}>₹{job.job_salary} / month</Text>
-          )}
+            {!!job.job_salary && (
+              <Text style={styles.salary}>₹{job.job_salary} / month</Text>
+            )}
 
-          <TouchableOpacity style={styles.applyBtn} onPress={handleApplyClick}>
-            <Text style={styles.applyText}>Apply now</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ===== DETAILS ===== */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Job details</Text>
-
-          <Text style={styles.desc}>
-            {job.job_description || 'No description provided.'}
-          </Text>
-
-          <View style={styles.hr} />
-
-          {/* JOB TYPE */}
-          <View style={styles.infoRow}>
-            {/* <Icon name="briefcase-outline" size={18} /> */}
-            <Text style={{ fontSize: 22 }}>💼</Text>
-            <Text style={styles.infoTitle}>Job type</Text>
-          </View>
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>{job.job_type || 'Full-time'}</Text>
+            <TouchableOpacity
+              style={styles.applyBtn}
+              onPress={handleApplyClick}
+            >
+              <Text style={styles.applyText}>Apply now</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* PAY */}
-          <View style={styles.infoRow}>
-            {/* <Icon name="currency-rupee" size={18} /> */}
-            <Text style={{ fontSize: 22 }}>💵</Text>
-            <Text style={styles.infoTitle}>Pay</Text>
-          </View>
-          <Text style={styles.infoValue}>₹ {job.job_salary}</Text>
+          {/* ===== DETAILS ===== */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Job details</Text>
 
-          {/* LOCATION */}
-          <View style={styles.infoRow}>
-            {/* <Icon name="map-marker-outline" size={18} /> */}
-            <Text style={{ fontSize: 22 }}>📍</Text>
-            <Text style={styles.infoTitle}>Location</Text>
-          </View>
-          <Text style={styles.infoValue}>
-            {job.city_name}, {job.state_name}
-          </Text>
+            <Text style={styles.desc}>
+              {job.job_description || 'No description provided.'}
+            </Text>
 
-          {/* SKILLS */}
-          <View style={styles.infoRow}>
-            {/* <Icon name="star-outline" size={18} /> */}
-            <Text style={{ fontSize: 22 }}>👉</Text>
-            <Text style={styles.infoTitle}>Skills</Text>
-          </View>
+            <View style={styles.hr} />
 
-          <View style={styles.skillWrap}>
-            {job.job_skills?.split(',').map((s, i) => (
-              <View key={i} style={styles.skillChip}>
-                <Text style={styles.skillText}>{s.trim()}</Text>
-              </View>
-            ))}
+            {/* JOB TYPE */}
+            <View style={styles.infoRow}>
+              {/* <Icon name="briefcase-outline" size={18} /> */}
+              <Text style={{ fontSize: 22 }}>💼</Text>
+              <Text style={styles.infoTitle}>Job type</Text>
+            </View>
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>{job.job_type || 'Full-time'}</Text>
+            </View>
+
+            {/* PAY */}
+            <View style={styles.infoRow}>
+              {/* <Icon name="currency-rupee" size={18} /> */}
+              <Text style={{ fontSize: 22 }}>💵</Text>
+              <Text style={styles.infoTitle}>Pay</Text>
+            </View>
+            <Text style={styles.infoValue}>₹ {job.job_salary}</Text>
+
+            {/* LOCATION */}
+            <View style={styles.infoRow}>
+              {/* <Icon name="map-marker-outline" size={18} /> */}
+              <Text style={{ fontSize: 22 }}>📍</Text>
+              <Text style={styles.infoTitle}>Location</Text>
+            </View>
+            <Text style={styles.infoValue}>
+              {job.city_name}, {job.state_name}
+            </Text>
+
+            {/* SKILLS */}
+            <View style={styles.infoRow}>
+              {/* <Icon name="star-outline" size={18} /> */}
+              <Text style={{ fontSize: 22 }}>👉</Text>
+              <Text style={styles.infoTitle}>Skills</Text>
+            </View>
+
+            <View style={styles.skillWrap}>
+              {job.job_skills?.split(',').map((s, i) => (
+                <View key={i} style={styles.skillChip}>
+                  <Text style={styles.skillText}>{s.trim()}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.infoRow}>
+              {/* <Icon name="star-outline" size={18} /> */}
+              <Text style={{ fontSize: 22 }}>📃</Text>
+              <Text style={styles.infoTitle}>Description</Text>
+            </View>
+            <Text style={styles.infoValue}>
+              {job.job_description || 'No description provided.'}
+            </Text>
           </View>
-          <View style={styles.infoRow}>
-            {/* <Icon name="star-outline" size={18} /> */}
-            <Text style={{ fontSize: 22 }}>📃</Text>
-            <Text style={styles.infoTitle}>Description</Text>
-          </View>
-           <Text style={styles.infoValue}>
-            {job.job_description || 'No description provided.'}
-          </Text>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {/* ===== INDEED STYLE FIXED FOOTER ===== */}
       <FooterMenu navigation={navigation} active="Home" />
@@ -324,5 +351,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#334155',
+  },
+  skelTopCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+  },
+  skelCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+  },
+  skelTitle: {
+    height: 22,
+    width: '70%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  skelSub: {
+    height: 14,
+    width: '50%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  skelSalary: {
+    height: 16,
+    width: '40%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 14,
+  },
+  skelBtn: {
+    height: 42,
+    width: '100%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 10,
+  },
+  skelLine: {
+    height: 14,
+    width: '60%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  skelLineWide: {
+    height: 14,
+    width: '100%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 10,
   },
 });

@@ -1,3 +1,4 @@
+import { RECEIPT_LOGO_BASE64 } from '../assets/Receiptlogo';
 export const getReceiptHTML = (payment = {}) => {
   const roleLower = (payment.role || '').toLowerCase();
 
@@ -62,7 +63,7 @@ export const getReceiptHTML = (payment = {}) => {
   }
 
   .hl-rec-company img {
-    height: 46px;
+    height: 70px;
   }
 
   .hl-rec-title {
@@ -155,7 +156,7 @@ export const getReceiptHTML = (payment = {}) => {
     <!-- HEADER -->
     <div class="hl-rec-header">
       <div class="hl-rec-company">
-        <img src="https://hirelink.in/logo.png" alt="Hirelink" />
+        <img src="${RECEIPT_LOGO_BASE64}" alt="Hirelink" />
       </div>
 
       <div>

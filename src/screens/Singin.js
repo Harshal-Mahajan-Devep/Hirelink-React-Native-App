@@ -38,6 +38,7 @@ export default function Signin({ navigation }) {
 
     onSubmit: async values => {
       setLoading(true);
+
       try {
         const res = await axios.post(
           `${BASE_URL}candidate/signin/tbl_candidate`,
@@ -49,6 +50,9 @@ export default function Signin({ navigation }) {
 
         const data = res.data;
 
+        /* ======================
+       1️⃣ LOGIN SUCCESS
+       ====================== */
         if (data?.status === true) {
           await AsyncStorage.setItem('candidate', JSON.stringify(data.data));
 
@@ -67,14 +71,92 @@ export default function Signin({ navigation }) {
           return;
         }
 
+        /* ======================
+       2️⃣ PAYMENT REQUIRED
+       ====================== */
+        if (data?.payment_required === true) {
+          Toast.show({
+            type: 'error',
+            text1: data.message || 'Payment pending',
+          });
+
+          await AsyncStorage.setItem(
+            'signupTempData',
+            JSON.stringify({
+              role: 'candidate',
+              data: data.data,
+              createdAt: Date.now(),
+            }),
+          );
+
+          await AsyncStorage.setItem(
+            'paymentUser',
+            JSON.stringify({
+              email: values.email,
+              role: 'candidate',
+            }),
+          );
+
+          navigation.navigate('Payment');
+          return;
+        }
+
+        /* ======================
+       3️⃣ NORMAL FAIL
+       ====================== */
         Toast.show({
           type: 'error',
           text1: data?.message || 'Invalid email or password',
         });
-      } catch {
+      } catch (error) {
+        const errData = error.response?.data;
+
+        /* ======================
+       4️⃣ OTP REQUIRED
+       ====================== */
+        if (errData?.otp_required === true) {
+          Toast.show({
+            type: 'error',
+            text1: errData.message || 'OTP verification required',
+          });
+
+          await AsyncStorage.setItem(
+            'verifyUser',
+            JSON.stringify({
+              email: values.email,
+              role: 'candidate',
+              mobile: errData.mobile,
+            }),
+          );
+
+          navigation.navigate('Verify');
+          return;
+        }
+
+        /* ======================
+       5️⃣ PAYMENT (API ERROR)
+       ====================== */
+        if (errData?.payment_required === true) {
+          Toast.show({
+            type: 'error',
+            text1: errData.message || 'Payment pending',
+          });
+
+          await AsyncStorage.setItem(
+            'paymentUser',
+            JSON.stringify({
+              email: values.email,
+              role: 'candidate',
+            }),
+          );
+
+          navigation.navigate('Payment');
+          return;
+        }
+
         Toast.show({
           type: 'error',
-          text1: 'Server error',
+          text1: errData?.message || 'Server error',
         });
       } finally {
         setLoading(false);

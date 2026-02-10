@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
 
   btn: {
-    backgroundColor: '#2557a7',
+    backgroundColor: '#047e04',
     height: 48,
     borderRadius: 999,
     justifyContent: 'center',

@@ -119,10 +119,45 @@ export default function JobsSAIScreen({ navigation }) {
       ? appliedJobs
       : interviewJobs;
 
+  const getEmptyMessage = () => {
+    if (activeTab === 'saved') return 'You have not saved any jobs yet';
+    if (activeTab === 'applied') return 'You have not applied to any jobs yet';
+    if (activeTab === 'interviews') return 'No interviews scheduled yet';
+    return '';
+  };
+
+  const getInterviewBadge = status => {
+    if (status === 'Pending')
+      return { text: 'Waiting for confirmation', color: '#f59e0b' };
+    if (status === 'Confirmed') return { text: 'Confirmed', color: '#16a34a' };
+    if (status === 'Completed') return { text: 'Completed', color: '#16a34a' };
+    if (status === 'Rejected') return { text: 'Rejected', color: '#dc2626' };
+    if (status === 'Hold') return { text: 'Hold', color: '#f59e0b' };
+    if (status === 'Candidate Cancelled')
+      return { text: 'You Declined', color: '#dc2626' };
+    if (status === 'Reschedule Request')
+      return { text: 'Reschedule Requested', color: '#2563eb' };
+
+    return { text: status || 'Unknown', color: '#6b7280' };
+  };
+
+  const updateInterviewStatus = async (interviewId, newStatus) => {
+    try {
+      await axios.post(
+        `${BASE_URL}admin/updatedata/tbl_interview/itv_id/${interviewId}`,
+        { itv_status: newStatus },
+      );
+
+      // refresh list + counts
+      fetchInterviewJobs(candidateId);
+      fetchCounts(candidateId);
+    } catch (e) {
+      console.log('Interview status update error:', e);
+    }
+  };
+
   /* ================= CARD ================= */
   const renderItem = ({ item }) => {
-    const badge = getBadge(item.itv_status);
-
     return (
       <View style={styles.card}>
         <Text style={styles.title}>{item.job_title}</Text>
@@ -131,6 +166,7 @@ export default function JobsSAIScreen({ navigation }) {
           {item.city_name}, {item.state_name}
         </Text>
 
+        {/* SAVED TAB */}
         {activeTab === 'saved' && (
           <TouchableOpacity
             style={styles.primaryBtn}
@@ -142,18 +178,75 @@ export default function JobsSAIScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* INTERVIEWS TAB */}
         {activeTab === 'interviews' && (
           <>
-            <View style={[styles.badge, { backgroundColor: badge.color }]}>
-              <Text style={styles.badgeText}>{badge.text}</Text>
+            {/* STATUS BADGE */}
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: getInterviewBadge(item.itv_status).color,
+                },
+              ]}
+            >
+              <Text style={styles.badgeText}>
+                {getInterviewBadge(item.itv_status).text}
+              </Text>
             </View>
 
+            {/* DATE + TIME */}
+            <Text style={styles.time}>
+              📅 {item.itv_date} ⏰{' '}
+              {new Date(`1970-01-01T${item.itv_time}`).toLocaleTimeString(
+                'en-IN',
+                {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true,
+                },
+              )}
+            </Text>
+
+            {/* VIRTUAL INTERVIEW LINK */}
             {item.itv_type === 'Virtual Interview' && (
               <TouchableOpacity
                 onPress={() => Linking.openURL(item.itv_meeting_link)}
               >
-                <Text style={styles.link}>Open meeting link</Text>
+                <Text style={styles.link}>🔗 Open meeting link</Text>
               </TouchableOpacity>
+            )}
+
+            {/* ACTION BUTTONS (WEB LIKE) */}
+            {item.itv_status === 'Pending' && (
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.confirmBtn}
+                  onPress={() =>
+                    updateInterviewStatus(item.itv_id, 'Confirmed')
+                  }
+                >
+                  <Text style={styles.btnText}>Confirm</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.rescheduleBtn}
+                  onPress={() =>
+                    updateInterviewStatus(item.itv_id, 'Reschedule Request')
+                  }
+                >
+                  <Text style={styles.rescheduleText}>Reschedule</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() =>
+                    updateInterviewStatus(item.itv_id, 'Candidate Cancelled')
+                  }
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -161,8 +254,17 @@ export default function JobsSAIScreen({ navigation }) {
     );
   };
 
+  const JobSkeletonCard = () => (
+    <View style={[styles.card, { opacity: 0.6 }]}>
+      <View style={styles.skelTitle} />
+      <View style={styles.skelCompany} />
+      <View style={styles.skelLoc} />
+      <View style={styles.skelBtn} />
+    </View>
+  );
+
   return (
-     <View style={{ flex: 1, backgroundColor: '#f3f6fb', paddingBottom: 70 }}>
+    <View style={{ flex: 1, backgroundColor: '#f3f6fb', paddingBottom: 70 }}>
       <Header navigation={navigation} />
 
       {/* TABS */}
@@ -189,7 +291,20 @@ export default function JobsSAIScreen({ navigation }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" style={{ marginTop: 40 }} />
+        <FlatList
+          data={Array.from({ length: 4 })}
+          keyExtractor={(_, i) => `skel-${i}`}
+          renderItem={() => <JobSkeletonCard />}
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: 100,
+          }}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : listData.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
+        </View>
       ) : (
         <FlatList
           data={listData}
@@ -197,7 +312,7 @@ export default function JobsSAIScreen({ navigation }) {
           renderItem={renderItem}
           contentContainerStyle={{
             padding: 16,
-            paddingBottom: 100, // footer space
+            paddingBottom: 100,
           }}
           showsVerticalScrollIndicator={false}
         />
@@ -268,5 +383,94 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: '800',
     color: '#2557a7',
+  },
+  time: {
+    marginTop: 6,
+    fontWeight: '700',
+    color: '#374151',
+  },
+
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    flexWrap: 'wrap',
+  },
+
+  confirmBtn: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+
+  rescheduleBtn: {
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+
+  cancelBtn: {
+    borderWidth: 1,
+    borderColor: '#dc2626',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+
+  btnText: {
+    color: '#fff',
+    fontWeight: '900',
+  },
+
+  rescheduleText: {
+    color: '#f59e0b',
+    fontWeight: '900',
+  },
+
+  cancelText: {
+    color: '#dc2626',
+    fontWeight: '900',
+  },
+
+  skelTitle: {
+    height: 16,
+    width: '70%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  skelCompany: {
+    height: 14,
+    width: '50%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  skelLoc: {
+    height: 12,
+    width: '40%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  skelBtn: {
+    height: 36,
+    width: '40%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 10,
+  },
+  emptyText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 60,
   },
 });
