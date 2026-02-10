@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,135 +6,126 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-} from "react-native";
+} from 'react-native';
 
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import messaging from "@react-native-firebase/messaging";
-import { BASE_URL } from "../config/constants";
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
+
+import Header from './Header';
+import FooterMenu from './Footer';
+import { BASE_URL } from '../config/constants';
 
 export default function Notification({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadNotifications = async (candidateId) => {
+  /* ================= LOAD ================= */
+  const loadNotifications = async candidateId => {
     try {
       const res = await axios.get(
-        `${BASE_URL}candidate/notifications/${candidateId}`
+        `${BASE_URL}candidate/notifications/${candidateId}`,
       );
-
       if (res.data?.status) {
         setNotifications(res.data.data || []);
       }
     } catch (err) {
-      console.log("Notification load error", err);
+      console.log('Notification load error', err);
     }
   };
 
-  const markAsRead = async (notiId, candidateId) => {
+  const markAsRead = async (id, candidateId) => {
     try {
-      await axios.get(`${BASE_URL}candidate/notification-read/${notiId}`);
+      await axios.get(`${BASE_URL}candidate/notification-read/${id}`);
       loadNotifications(candidateId);
-    } catch (err) {
-      console.log("Mark read error", err);
-    }
+    } catch {}
   };
 
-  const handleClick = async (item) => {
-    const candidateStr = await AsyncStorage.getItem("candidate");
-    const candidate = candidateStr ? JSON.parse(candidateStr) : null;
-    if (!candidate) return;
+  const handleClick = async item => {
+    const stored = await AsyncStorage.getItem('candidate');
+    const cand = stored ? JSON.parse(stored) : null;
+    if (!cand) return;
 
     if (item.noti_is_read == 0) {
-      await markAsRead(item.noti_id, candidate.can_id);
-
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.noti_id === item.noti_id ? { ...n, noti_is_read: 1 } : n
-        )
+      await markAsRead(item.noti_id, cand.can_id);
+      setNotifications(prev =>
+        prev.map(n =>
+          n.noti_id === item.noti_id ? { ...n, noti_is_read: 1 } : n,
+        ),
       );
     }
   };
 
-  // ✅ Initial Load
+  /* ================= INITIAL ================= */
   useEffect(() => {
     (async () => {
-      const candidateStr = await AsyncStorage.getItem("candidate");
-      const candidate = candidateStr ? JSON.parse(candidateStr) : null;
-
-      if (!candidate) {
-        navigation.replace("Signin");
+      const stored = await AsyncStorage.getItem('candidate');
+      const cand = stored ? JSON.parse(stored) : null;
+      if (!cand) {
+        navigation.replace('Signin');
         return;
       }
-
       setLoading(true);
-      await loadNotifications(candidate.can_id);
+      await loadNotifications(cand.can_id);
       setLoading(false);
     })();
-  }, [navigation]);
+  }, []);
 
-  // ✅ Real-time refresh when FCM received (Foreground)
+  /* ================= REAL-TIME FCM ================= */
   useEffect(() => {
-    const unsubscribe = messaging().onMessage(async (remoteMessage) => {
-      console.log("🔥 Foreground FCM:", remoteMessage);
-
-      const candidateStr = await AsyncStorage.getItem("candidate");
-      const candidate = candidateStr ? JSON.parse(candidateStr) : null;
-
-      const candidateIdFromMsg = remoteMessage?.data?.candidate_id;
-
-      if (candidate && candidateIdFromMsg === String(candidate.can_id)) {
-        loadNotifications(candidate.can_id);
+    const unsubscribe = messaging().onMessage(async msg => {
+      const stored = await AsyncStorage.getItem('candidate');
+      const cand = stored ? JSON.parse(stored) : null;
+      if (cand && msg?.data?.candidate_id === String(cand.can_id)) {
+        loadNotifications(cand.can_id);
       }
     });
-
     return unsubscribe;
   }, []);
 
+  /* ================= RENDER ================= */
   const renderItem = ({ item }) => {
     const unread = item.noti_is_read == 0;
 
     return (
       <TouchableOpacity
-        style={[styles.item, unread ? styles.unread : null]}
+        style={[styles.item, unread && styles.unread]}
         onPress={() => handleClick(item)}
         activeOpacity={0.8}
       >
-        {/* LEFT ICON */}
         <View style={styles.iconBox}>
-          <Text style={styles.iconText}>
-            {item.noti_type === "interview" ? "📅" : "🔔"}
+          <Text style={styles.icon}>
+            {item.noti_type === 'interview' ? '📅' : '🔔'}
           </Text>
         </View>
 
-        {/* CENTER CONTENT */}
         <View style={styles.content}>
           <Text style={styles.title} numberOfLines={1}>
             {item.noti_title}
           </Text>
-          <Text style={styles.message} numberOfLines={2}>
+          <Text style={styles.msg} numberOfLines={2}>
             {item.noti_message}
           </Text>
         </View>
 
-        {/* RIGHT */}
         <View style={styles.right}>
           <Text style={styles.time}>
-            {new Date(item.noti_created_date).toLocaleString()}
+            {new Date(item.noti_created_date).toLocaleDateString()}
           </Text>
-
-          {unread ? <View style={styles.dot} /> : null}
+          {unread && <View style={styles.dot} />}
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.page}>
+    <View style={{ flex: 1, backgroundColor: '#f3f6fb' }}>
+      <Header navigation={navigation} />
+
       {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={styles.countBox}>
+      <View style={styles.top}>
+        <Text style={styles.topTitle}>Notifications</Text>
+        <View style={styles.count}>
           <Text style={styles.countText}>{notifications.length}</Text>
         </View>
       </View>
@@ -143,122 +134,118 @@ export default function Notification({ navigation }) {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" />
-          <Text style={{ marginTop: 10 }}>Loading...</Text>
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.center}>
-          <Text style={{ color: "#6b7280" }}>No notifications yet</Text>
+          <Text style={{ color: '#6b7280' }}>No notifications yet</Text>
         </View>
       ) : (
         <FlatList
           data={notifications}
-          keyExtractor={(item) => String(item.noti_id)}
+          keyExtractor={i => String(i.noti_id)}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 30 }}
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: 100, // footer space
+          }}
+          showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* FIXED FOOTER */}
+      <FooterMenu navigation={navigation} active="Messages" />
     </View>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  page: {
+  center: {
     flex: 1,
-    backgroundColor: "#fff",
-    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-
-  header: {
-    backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginBottom: 10,
-    elevation: 2,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  top: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
   },
 
-  headerTitle: {
+  topTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
+    fontWeight: '900',
+    color: '#111827',
   },
 
-  countBox: {
-    backgroundColor: "#e8f0fe",
+  count: {
+    backgroundColor: '#e8f0fe',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
   },
 
   countText: {
-    color: "#0a66c2",
-    fontWeight: "800",
+    fontWeight: '900',
+    color: '#2557a7',
   },
 
   item: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 10,
-    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: '#e5e7eb',
+    marginBottom: 12,
   },
 
   unread: {
-    backgroundColor: "#eef3f8",
-    borderColor: "#cfe3ff",
+    backgroundColor: '#eef3f8',
+    borderColor: '#cfe3ff',
   },
 
   iconBox: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#f3f4f6",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  iconText: { fontSize: 20 },
+  icon: { fontSize: 20 },
 
   content: { flex: 1 },
 
   title: {
     fontSize: 14,
-    fontWeight: "800",
-    color: "#1f2937",
+    fontWeight: '800',
+    color: '#111827',
   },
 
-  message: {
+  msg: {
     marginTop: 4,
     fontSize: 13,
-    color: "#555",
+    color: '#4b5563',
   },
 
   right: {
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 8,
-    maxWidth: 130,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
   },
 
   time: {
     fontSize: 11,
-    color: "#888",
-    textAlign: "right",
+    color: '#6b7280',
   },
 
   dot: {
     width: 10,
     height: 10,
     borderRadius: 999,
-    backgroundColor: "#0a66c2",
+    backgroundColor: '#2557a7',
   },
 });

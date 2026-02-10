@@ -5,10 +5,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 
 import axios from 'axios';
@@ -30,9 +30,7 @@ export default function Signin({ navigation }) {
     },
 
     validationSchema: Yup.object({
-      email: Yup.string()
-        .email('Invalid email format')
-        .required('Email is required'),
+      email: Yup.string().email('Invalid email').required('Email is required'),
       password: Yup.string()
         .min(6, 'Minimum 6 characters')
         .required('Password is required'),
@@ -40,7 +38,6 @@ export default function Signin({ navigation }) {
 
     onSubmit: async values => {
       setLoading(true);
-
       try {
         const res = await axios.post(
           `${BASE_URL}candidate/signin/tbl_candidate`,
@@ -55,16 +52,18 @@ export default function Signin({ navigation }) {
         if (data?.status === true) {
           await AsyncStorage.setItem('candidate', JSON.stringify(data.data));
 
+          await AsyncStorage.setItem('isLoggedIn', 'true');
+
           if (data.data?.can_id) {
             saveFcmToken(data.data.can_id);
           }
 
           Toast.show({
             type: 'success',
-            text1: 'Login successful ✅',
+            text1: 'Login successful',
           });
 
-          navigation.replace('Home');
+          navigation.replace('Jobs');
           return;
         }
 
@@ -72,7 +71,7 @@ export default function Signin({ navigation }) {
           type: 'error',
           text1: data?.message || 'Invalid email or password',
         });
-      } catch (error) {
+      } catch {
         Toast.show({
           type: 'error',
           text1: 'Server error',
@@ -85,41 +84,23 @@ export default function Signin({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#f4f7fb' }}
+      style={{ flex: 1, backgroundColor: '#f3f6fb' }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.center}>
+      <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.card}>
           {/* LOGO */}
-          <View style={styles.logoWrap}>
-            <Image
-              source={require('../assets/hirelink.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
+          <Text style={styles.logo}>Hirelink</Text>
 
           {/* HEADER */}
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.heading}>Welcome back</Text>
-              <Text style={styles.subText}>Login to Hirelink</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.signupBtn}
-              onPress={() => navigation.navigate('Signup')}
-            >
-              <Text style={styles.signupText}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.heading}>Sign in</Text>
+          <Text style={styles.subText}>Continue to your account</Text>
 
           {/* EMAIL */}
-          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter Email"
-            placeholderTextColor="#000"
+            placeholder="Email address"
+            placeholderTextColor={'#000000'}
             autoCapitalize="none"
             keyboardType="email-address"
             value={formik.values.email}
@@ -131,18 +112,10 @@ export default function Signin({ navigation }) {
           )}
 
           {/* PASSWORD */}
-          <View style={styles.passRow}>
-            <Text style={styles.label}>Password</Text>
-
-            <TouchableOpacity onPress={() => navigation.navigate('Forgot')}>
-              <Text style={styles.forgot}>Forgot?</Text>
-            </TouchableOpacity>
-          </View>
-
           <TextInput
             style={styles.input}
-            placeholder="Enter Password"
-            placeholderTextColor="#000"
+            placeholder="Password"
+            placeholderTextColor={'#000000'}
             secureTextEntry
             value={formik.values.password}
             onChangeText={formik.handleChange('password')}
@@ -151,6 +124,11 @@ export default function Signin({ navigation }) {
           {formik.touched.password && formik.errors.password && (
             <Text style={styles.error}>{formik.errors.password}</Text>
           )}
+
+          {/* FORGOT */}
+          <TouchableOpacity onPress={() => navigation.navigate('Forgot')}>
+            <Text style={styles.forgot}>Forgot password?</Text>
+          </TouchableOpacity>
 
           {/* LOGIN */}
           <TouchableOpacity
@@ -161,102 +139,101 @@ export default function Signin({ navigation }) {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.loginText}>Login</Text>
+              <Text style={styles.loginText}>Sign in</Text>
             )}
           </TouchableOpacity>
+
+          {/* SIGNUP */}
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>New to Hirelink?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+              <Text style={styles.link}> Create account</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
+  page: {
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 16,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
-    elevation: 6,
-  },
-  logoWrap: {
-    alignItems: 'center',
-    marginBottom: 10,
+    borderRadius: 14,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   logo: {
-    width: 150,
-    height: 60,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#25a736',
+    marginBottom: 10,
   },
   heading: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    marginBottom: 4,
+    color: '#111',
   },
   subText: {
     fontSize: 13,
     color: '#6b7280',
-    marginTop: 2,
-  },
-  signupBtn: {
-    borderWidth: 1,
-    borderColor: '#d4d4d8',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-  },
-  signupText: {
-    fontWeight: '700',
-    color: '#111827',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
+    borderColor: '#d1d5db',
+    borderRadius: 10,
     paddingHorizontal: 14,
     height: 48,
-    marginBottom: 8,
-    color: '#000',
+    marginBottom: 10,
+    fontSize: 14,
+    backgroundColor: '#fff',
+    color: '#111',
   },
   error: {
-    color: 'red',
+    color: '#dc2626',
     fontSize: 12,
     marginBottom: 6,
-  },
-  passRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   forgot: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#2563eb',
+    color: '#a76f25',
+    marginBottom: 14,
+    alignSelf: 'flex-end',
   },
   loginBtn: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#007a0b',
     height: 48,
-    borderRadius: 999,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
   },
   loginText: {
     color: '#fff',
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: 15,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 18,
+  },
+  footerText: {
+    fontSize: 13,
+    color: '#374151',
+  },
+  link: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#2557a7',
   },
 });

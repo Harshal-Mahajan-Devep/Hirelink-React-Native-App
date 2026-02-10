@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import Header from './Header';
-import Footer from './Footer';
 import {
   View,
   Text,
@@ -90,7 +88,7 @@ export default function Help({ navigation }) {
 
   return (
     <>
-      <Header navigation={navigation} />
+     
       <ScrollView
         style={styles.page}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -125,7 +123,7 @@ export default function Help({ navigation }) {
             </View>
           );
         })}
-        <Footer navigation={navigation} />
+
       </ScrollView>
     </>
   );

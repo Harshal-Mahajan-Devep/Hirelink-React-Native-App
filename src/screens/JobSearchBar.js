@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
-  TouchableOpacity,
   FlatList,
+  TouchableOpacity,
+  Text,
   StyleSheet,
 } from 'react-native';
+import { COLORS } from '../config/colors';
 
 export default function JobSearchBar({
   jobs = [],
@@ -22,19 +23,11 @@ export default function JobSearchBar({
 }) {
   const [keywordSug, setKeywordSug] = useState([]);
   const [placeSug, setPlaceSug] = useState([]);
-  const [showKeywordSug, setShowKeywordSug] = useState(false);
-  const [showPlaceSug, setShowPlaceSug] = useState(false);
 
-  /* ================= KEYWORD SUGGESTIONS ================= */
+  /* ================= KEYWORD SUGGEST ================= */
   useEffect(() => {
-    if (!searchKeyword?.trim()) {
+    if (!searchKeyword.trim() || searchKeyword === appliedKeyword) {
       setKeywordSug([]);
-      setShowKeywordSug(false);
-      return;
-    }
-
-    if (searchKeyword === appliedKeyword) {
-      setShowKeywordSug(false);
       return;
     }
 
@@ -42,49 +35,40 @@ export default function JobSearchBar({
     let suggestions = [];
 
     jobs.forEach(job => {
-      // ✅ Skills
-      if (job?.job_skills) {
-        job.job_skills
-          .split(',')
-          .map(s => s.trim())
-          .forEach(skill => {
-            if (skill.toLowerCase().startsWith(keyword)) {
-              suggestions.push({ text: skill, type: 'Skill' });
-            }
-          });
+      if (job.job_skills) {
+        job.job_skills.split(',').forEach(skill => {
+          if (skill.trim().toLowerCase().startsWith(keyword)) {
+            suggestions.push({ text: skill.trim(), type: 'Skill' });
+          }
+        });
       }
 
-      // ✅ Titles / Company / Categories
       [
-        { value: job?.job_title, type: 'Job Title' },
-        { value: job?.job_company, type: 'Company' },
-
-        { value: job?.main_category, type: 'Category' },
-        { value: job?.sub_category, type: 'Sub Category' },
-        { value: job?.sub_category1, type: 'Category' },
-        { value: job?.sub_category2, type: 'Category' },
-        { value: job?.sub_category3, type: 'Category' },
-      ].forEach(item => {
-        if (item.value?.toLowerCase().startsWith(keyword)) {
-          suggestions.push({ text: item.value, type: item.type });
+        job.job_title,
+        job.job_company,
+        job.main_category,
+        job.sub_category,
+        job.sub_category1,
+        job.sub_category2,
+        job.sub_category3,
+      ].forEach(val => {
+        if (val?.toLowerCase().startsWith(keyword)) {
+          suggestions.push({ text: val, type: 'Match' });
         }
       });
     });
 
-    // ✅ Remove duplicates
     const unique = suggestions.filter(
       (v, i, a) => a.findIndex(t => t.text === v.text) === i,
     );
 
     setKeywordSug(unique.slice(0, 8));
-    setShowKeywordSug(true);
   }, [searchKeyword, appliedKeyword, jobs]);
 
-  /* ================= PLACE SUGGESTIONS ================= */
+  /* ================= PLACE SUGGEST ================= */
   useEffect(() => {
-    if (!searchPlace?.trim()) {
+    if (!searchPlace.trim()) {
       setPlaceSug([]);
-      setShowPlaceSug(false);
       return;
     }
 
@@ -93,105 +77,84 @@ export default function JobSearchBar({
     const suggestions = jobs
       .filter(
         j =>
-          j?.city_name?.toLowerCase().includes(place) ||
-          j?.state_name?.toLowerCase().includes(place),
+          j.city_name?.toLowerCase().includes(place) ||
+          j.state_name?.toLowerCase().includes(place),
       )
       .map(j => `${j.city_name}, ${j.state_name}`)
       .filter((v, i, a) => a.indexOf(v) === i)
       .slice(0, 6);
 
     setPlaceSug(suggestions);
-    setShowPlaceSug(true);
   }, [searchPlace, jobs]);
 
   return (
     <View style={styles.wrapper}>
       {/* KEYWORD */}
-      <View style={styles.block}>
-        <Text style={styles.label}>Job Title / Skill</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Job title, skills, company"
+        placeholderTextColor={'#000000'}
+        value={searchKeyword}
+        onChangeText={t => {
+          setSearchKeyword(t);
+          setAppliedKeyword('');
+        }}
+      />
 
-        <View style={styles.inputBox}>
-          <Text style={styles.icon}>🔍</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Job Title, Company"
-            placeholderTextColor="#000"
-            value={searchKeyword}
-            onChangeText={text => {
-              setSearchKeyword(text);
-              setAppliedKeyword('');
-            }}
-            onFocus={() => searchKeyword && setShowKeywordSug(true)}
+      {keywordSug.length > 0 && (
+        <View style={styles.suggestBox}>
+          <FlatList
+            data={keywordSug}
+            keyExtractor={(i, idx) => idx.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.suggestItem}
+                onPress={() => {
+                  setSearchKeyword(item.text);
+                  setAppliedKeyword(item.text);
+                  setKeywordSug([]);
+                }}
+              >
+                <Text style={styles.suggestText}>{item.text}</Text>
+                <Text style={styles.suggestType}>{item.type}</Text>
+              </TouchableOpacity>
+            )}
           />
         </View>
-
-        {showKeywordSug && keywordSug.length > 0 && (
-          <View style={styles.suggestBox}>
-            <FlatList
-              data={keywordSug}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.suggestItem}
-                  onPress={() => {
-                    setSearchKeyword(item.text);
-                    setAppliedKeyword(item.text);
-                    setShowKeywordSug(false);
-                  }}
-                >
-                  <Text style={styles.suggestText}>{item.text}</Text>
-                  <Text style={styles.suggestType}>({item.type})</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
-      </View>
+      )}
 
       {/* LOCATION */}
-      <View style={styles.block}>
-        <Text style={styles.label}>Location</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="City or state"
+        placeholderTextColor={'#000000'}
+        value={searchPlace}
+        onChangeText={t => {
+          setSearchPlace(t);
+          setAppliedPlace('');
+        }}
+      />
 
-        <View style={styles.inputBox}>
-          <Text style={styles.icon}>📍</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="City, State"
-            placeholderTextColor="#000"
-            value={searchPlace}
-            onChangeText={text => {
-              setSearchPlace(text);
-              setAppliedPlace('');
-            }}
-            onFocus={() => searchPlace && setShowPlaceSug(true)}
-          />
+      {placeSug.length > 0 && (
+        <View style={styles.suggestBox}>
+          {placeSug.map((p, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.suggestItem}
+              onPress={() => {
+                setSearchPlace(p);
+                setAppliedPlace(p);
+                setPlaceSug([]);
+              }}
+            >
+              <Text style={styles.suggestText}>{p}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
+      )}
 
-        {showPlaceSug && placeSug.length > 0 && (
-          <View style={styles.suggestBox}>
-            <FlatList
-              data={placeSug}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.suggestItem}
-                  onPress={() => {
-                    setSearchPlace(item);
-                    setAppliedPlace(item);
-                    setShowPlaceSug(false);
-                  }}
-                >
-                  <Text style={styles.suggestText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
-      </View>
-
-      {/* BUTTON */}
-      <TouchableOpacity style={styles.findBtn} onPress={onSearch}>
-        <Text style={styles.findBtnText}>Find Jobs</Text>
+      <TouchableOpacity style={styles.searchBtn} onPress={onSearch}>
+        <Text style={styles.searchText}>Search jobs</Text>
       </TouchableOpacity>
     </View>
   );
@@ -199,90 +162,54 @@ export default function JobSearchBar({
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: '#ffffff',
-    padding: 14,
+    backgroundColor: COLORS.card,
     borderRadius: 16,
-    elevation: 0,
-    marginBottom: 18,
-  },
-
-  block: {
-    marginBottom: 10,
-    position: 'relative',
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 6,
-  },
-
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    padding: 14,
+    gap: 10,
     borderWidth: 1,
-    borderColor: '#bcbcbc',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    height: 46,
-    backgroundColor: '#fff',
+    borderColor: COLORS.border,
   },
-
-  icon: {
-    marginRight: 8,
-    fontSize: 16,
-  },
-
   input: {
-    flex: 1,
-    fontSize: 15,
-    color: '#111',
-  },
-
-  suggestBox: {
-    backgroundColor: '#dfdcdc',
+    backgroundColor: '#f9fafb',
     borderRadius: 12,
-    marginTop: 8,
-    maxHeight: 220,
-    overflow: 'hidden',
+    paddingHorizontal: 14,
+    height: 46,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
-
+  suggestBox: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    maxHeight: 220,
+  },
   suggestItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
+    borderBottomColor: '#f1f5f9',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
-
   suggestText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#111',
-    flex: 1,
   },
-
   suggestType: {
     fontSize: 12,
     color: '#6b7280',
-    marginLeft: 10,
   },
-
-  findBtn: {
-    backgroundColor: '#00b341',
+  searchBtn: {
+    backgroundColor: COLORS.primary,
     height: 48,
-    borderRadius: 999,
-    justifyContent: 'center',
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
   },
-
-  findBtnText: {
+  searchText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
+    fontSize: 15,
   },
 });

@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import Header from './Header';
-import Footer from './Footer';
 import {
   View,
   Text,
@@ -12,6 +10,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
+
+import Header from './Header';
+import Footer from './Footer';
 import { BASE_URL } from '../config/constants';
 
 export default function Company({ navigation }) {
@@ -21,20 +22,21 @@ export default function Company({ navigation }) {
   const [popularCompanies, setPopularCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const companiesToShow =
+    searchText.trim().length > 0 ? filteredCompanies : popularCompanies;
+
+  /* ================= FETCH COMPANIES (SAME) ================= */
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-
-      // ✅ API
-      const url = `${BASE_URL}admin/getdata/tbl_employer`;
-      const res = await axios.get(url);
+      const res = await axios.get(`${BASE_URL}admin/getdata/tbl_employer`);
 
       if (res?.data?.data) {
         setCompanies(res.data.data);
-        setPopularCompanies(res.data.data.slice(0, 4));
+        setPopularCompanies(res.data.data.slice(0, 6));
       }
     } catch (err) {
-      console.log('API Error:', err);
+      console.log('Company API Error:', err);
     } finally {
       setLoading(false);
     }
@@ -44,6 +46,7 @@ export default function Company({ navigation }) {
     fetchCompanies();
   }, []);
 
+  /* ================= FILTER (SAME) ================= */
   const filteredCompanies = useMemo(() => {
     if (!searchText.trim()) return [];
     return companies.filter(c =>
@@ -53,8 +56,8 @@ export default function Company({ navigation }) {
     );
   }, [searchText, companies]);
 
-  const handleSelectCompany = companyName => {
-    setSearchText(companyName);
+  const handleSelectCompany = name => {
+    setSearchText(name);
     setShowList(false);
   };
 
@@ -62,221 +65,249 @@ export default function Company({ navigation }) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 10 }}>Loading companies...</Text>
+        <Text style={styles.loadingText}>Loading companies…</Text>
       </View>
     );
   }
 
   return (
     <>
-     <Header navigation={navigation} />
-    <View style={styles.container}>
-      {/* TITLE */}
-      <Text style={styles.mainTitle}>Find great places to work</Text>
-      <Text style={styles.subText}>Get access to companies profile</Text>
+      <Header navigation={navigation} />
 
-      {/* SEARCH */}
-      <View style={styles.searchWrapper}>
-        <View style={styles.searchBox}>
+      <View style={styles.container}>
+        {/* ===== TITLE ===== */}
+        <Text style={styles.mainTitle}>Find great places to work</Text>
+        <Text style={styles.subText}>
+          Discover companies and explore opportunities
+        </Text>
+
+        {/* ===== SEARCH BAR ===== */}
+        <View style={styles.searchCard}>
           <TextInput
-            placeholder="Company name or job title"
+            placeholder="Search company name"
             placeholderTextColor="#9ca3af"
             value={searchText}
             onChangeText={text => {
               setSearchText(text);
               setShowList(text.length > 0);
             }}
-            onFocus={() => {
-              if (searchText.length > 0) setShowList(true);
-            }}
-            onBlur={() => {
-              // ✅ blur झाल्यावर hide
-              setTimeout(() => setShowList(false), 200);
-            }}
+            onFocus={() => searchText && setShowList(true)}
+            onBlur={() => setTimeout(() => setShowList(false), 200)}
             style={styles.searchInput}
           />
+
+          <TouchableOpacity style={styles.searchBtn}>
+            <Text style={styles.searchBtnText}>Search</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.findBtn}>
-          <Text style={styles.findBtnText}>Find</Text>
-        </TouchableOpacity>
+        {/* ===== AUTOSUGGEST ===== */}
+        {showList && filteredCompanies.length > 0 && (
+          <View style={styles.dropdown}>
+            <FlatList
+              data={filteredCompanies.slice(0, 8)}
+              keyExtractor={(item, index) => String(index)}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleSelectCompany(item.emp_companyname)}
+                >
+                  <Text style={styles.dropdownText}>
+                    {item.emp_companyname}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
+        {/* ===== POPULAR ===== */}
+        <Text style={styles.popularTitle}>Popular companies</Text>
+
+        <FlatList
+          data={companiesToShow}
+          keyExtractor={(item, index) => String(index)}
+          numColumns={2}
+          columnWrapperStyle={{ gap: 12 }}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          ListEmptyComponent={
+            searchText ? (
+              <Text style={styles.noResult}>No companies found</Text>
+            ) : null
+          }
+          renderItem={({ item }) => {
+            const logoUrl = item.emp_com_logo
+              ? `${BASE_URL}Uploads/${item.emp_com_logo}`
+              : 'https://via.placeholder.com/100';
+
+            return (
+              <TouchableOpacity
+                style={styles.companyCard}
+                onPress={() =>
+                  navigation.navigate('Jobs', {
+                    company: item.emp_companyname,
+                  })
+                }
+              >
+                <Image source={{ uri: logoUrl }} style={styles.logoImg} />
+
+                <Text style={styles.companyName} numberOfLines={1}>
+                  {item.emp_companyname}
+                </Text>
+
+                <Text style={styles.viewJobs}>View jobs</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
       </View>
 
-      {/* DROPDOWN LIST */}
-      {showList && filteredCompanies.length > 0 && (
-        <View style={styles.dropdown}>
-          <FlatList
-            data={filteredCompanies.slice(0, 8)}
-            keyExtractor={(item, index) => String(index)}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => handleSelectCompany(item.emp_companyname)}
-              >
-                <Text style={styles.dropdownText}>{item.emp_companyname}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
-
-      {/* POPULAR COMPANIES */}
-      <Text style={styles.popularTitle}>Popular Companies</Text>
-
-      <FlatList
-        data={popularCompanies}
-        keyExtractor={(item, index) => String(index)}
-        numColumns={2}
-        columnWrapperStyle={{ gap: 12 }}
-        contentContainerStyle={{ paddingBottom: 30 }}
-        renderItem={({ item }) => {
-          const logoUrl = item.emp_com_logo
-            ? `${BASE_URL}Uploads/${item.emp_com_logo}`
-            : 'https://via.placeholder.com/100';
-
-          return (
-            <TouchableOpacity style={styles.companyCard}>
-              <Image source={{ uri: logoUrl }} style={styles.logoImg} />
-
-              <Text style={styles.companyName} numberOfLines={1}>
-                {item.emp_companyname}
-              </Text>
-
-              <Text style={styles.smallText}></Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
-      <Footer navigation={navigation} /> 
-    </View>
-    
+      <Footer navigation={navigation} />
     </>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  loadingText: {
+    marginTop: 10,
+    color: '#6b7280',
+  },
 
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f9fafb',
     padding: 16,
   },
 
   mainTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: '900',
     textAlign: 'center',
-    marginTop: 10,
+    color: '#111827',
   },
 
   subText: {
-    fontSize: 13,
-    color: '#6b7280',
     textAlign: 'center',
+    color: '#6b7280',
+    fontSize: 13,
     marginTop: 6,
-    marginBottom: 14,
+    marginBottom: 18,
   },
 
-  searchWrapper: {
+  /* SEARCH */
+  searchCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 10,
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     marginBottom: 6,
   },
 
-  searchBox: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#bcbcbc',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    height: 48,
-    justifyContent: 'center',
-  },
-
   searchInput: {
-    fontSize: 15,
-    color: '#000',
+    flex: 1,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+    color: '#111827',
+    fontSize: 14,
   },
 
-  findBtn: {
-    backgroundColor: '#00b341',
-    height: 48,
-    borderRadius: 999,
+  searchBtn: {
+    backgroundColor: '#2557a7',
     paddingHorizontal: 18,
+    borderRadius: 12,
     justifyContent: 'center',
-    alignItems: 'center',
   },
 
-  findBtnText: {
+  searchBtnText: {
     color: '#fff',
     fontWeight: '800',
   },
 
+  /* DROPDOWN */
   dropdown: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 12,
-    marginTop: 6,
-    marginBottom: 10,
-    maxHeight: 250,
+    maxHeight: 240,
+    marginBottom: 14,
     overflow: 'hidden',
   },
 
   dropdownItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
 
   dropdownText: {
+    fontWeight: '700',
     color: '#111827',
-    fontWeight: '600',
   },
 
+  /* POPULAR */
   popularTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    marginTop: 16,
+    fontWeight: '900',
     marginBottom: 12,
     color: '#111827',
   },
 
   companyCard: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#e4e4e4',
-    borderRadius: 12,
-    padding: 12,
     backgroundColor: '#fff',
-    elevation: 2,
-    marginBottom: 12,
-    minHeight: 180,
+    borderRadius: 16,
+    padding: 14,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 12,
+  },
+  viewJobs: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#00b341',
   },
 
-  logoImg: {
-    width: 120,
-    height: 80,
-    borderRadius: 16,
+  noResult: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#6b7280',
+    fontWeight: '600',
+  },  
+
+  logo: {
+    width: 110,
+    height: 70,
     resizeMode: 'contain',
     marginBottom: 10,
   },
 
   companyName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '800',
     textAlign: 'center',
+    color: '#111827',
   },
 
-  smallText: {
+  viewText: {
     marginTop: 6,
     fontSize: 12,
-    color: '#777',
+    fontWeight: '700',
+    color: '#2557a7',
   },
 });

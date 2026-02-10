@@ -1,97 +1,66 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function Footer({ navigation }) {
+export default function FooterMenu({ navigation, active }) {
+  const tabs = [
+    { name: 'Home', route: 'Jobs', icon: '🏠' },
+    { name: 'My jobs', route: 'MyJobs', icon: '💾' },
+    { name: 'Notifications', route: 'Notification', icon: '🔔' },
+    { name: 'Profile', route: 'Profile', icon: '👤' },
+  ];
+
   return (
     <View style={styles.footer}>
-      {/* LINKS */}
-      <View style={styles.linksWrap}>
-        <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
-          <Text style={styles.link}>Jobs</Text>
-        </TouchableOpacity>
+      {tabs.map(t => {
+        const isActive = active === t.name;
 
-        <TouchableOpacity onPress={() => navigation.navigate('Company')}>
-          <Text style={styles.link}>Companies</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('About')}>
-          <Text style={styles.link}>About</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Help')}>
-          <Text style={styles.link}>Help</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Terms')}>
-          <Text style={styles.link}>Terms & Condition</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('ReturnPolicy')}>
-          <Text style={styles.link}>Return Policy</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('PrivacyPolicies')}
-        >
-          <Text style={styles.link}>Privacy & Policies</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* COPYRIGHT */}
-      <Text style={styles.copy}>
-        All rights reserved © 2026 Hirelink Infotech Pvt Ltd {""} Design By {' '}
-        <Text
-          style={styles.brandLink}
-          onPress={() => Linking.openURL('https://www.esenceweb.com/')}
-        >
-          Ensenceweb IT
-        </Text>
-      </Text>
+        return (
+          <TouchableOpacity
+            key={t.name}
+            style={styles.tab}
+            onPress={() => navigation.navigate(t.route)}
+          >
+            <Text style={[styles.icon, isActive && styles.active]}>
+              {t.icon}
+            </Text>
+            <Text style={[styles.label, isActive && styles.active]}>
+              {t.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   footer: {
-    backgroundColor: '#000',
-    padding: 20,
-    marginTop: 50,
-    marginBottom: -20,
-    marginEnd: -15,
-    marginStart: -15,
-  },
-
-  linksWrap: {
+    position: 'absolute', // ✅ FIXED
+    bottom: 0, // ✅ ALWAYS BOTTOM
+    left: 0,
+    right: 0,
+    height: 64,
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderColor: '#e5e7eb',
+    elevation: 8, // Android shadow
+  },
+  tab: {
+    flex: 1,
     justifyContent: 'center',
-    gap: 12,
+    alignItems: 'center',
   },
-
-  link: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-    marginHorizontal: 6,
-    marginVertical: 6,
+  icon: {
+    fontSize: 18,
+    color: '#6b7280',
   },
-
-  copy: {
-    marginTop: 18,
-    color: '#7c7c7c',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-
-  brandLink: {
-    color: '#ffffff',
+  label: {
+    fontSize: 11,
     fontWeight: '700',
+    color: '#6b7280',
+  },
+  active: {
+    color: '#2557a7',
   },
 });

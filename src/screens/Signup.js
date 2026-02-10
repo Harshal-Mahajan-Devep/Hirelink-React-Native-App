@@ -45,11 +45,10 @@ export default function Signup({ navigation }) {
       password: '',
     },
     validationSchema,
-    onSubmit: async (values, { resetForm }) => {
+    onSubmit: async values => {
       setLoading(true);
-
       try {
-        const response = await axios.post(
+        const res = await axios.post(
           `${BASE_URL}candidate/signup/tbl_candidate`,
           {
             can_name: values.fullname,
@@ -62,31 +61,26 @@ export default function Signup({ navigation }) {
           },
         );
 
-        const data = response.data;
-
-        if (data?.status === true || data?.status === 'success') {
+        if (res.data?.status) {
           Toast.show({
             type: 'success',
-            text1: 'Signup successful!',
+            text1: 'Account created',
             text2: 'OTP sent to your email',
           });
 
-          // ✅ FCM token
-          if (data.data?.can_id) {
-            saveFcmToken(data.data.can_id);
+          if (res.data.data?.can_id) {
+            saveFcmToken(res.data.data.can_id);
           }
 
-          // ✅ TEMP signup data (same as web)
           await AsyncStorage.setItem(
             'signupTempData',
             JSON.stringify({
               role: 'candidate',
-              data: data.data,
+              data: res.data.data,
               createdAt: Date.now(),
             }),
           );
 
-          // ✅ verify user (OTP flow)
           await AsyncStorage.setItem(
             'verifyUser',
             JSON.stringify({
@@ -96,7 +90,6 @@ export default function Signup({ navigation }) {
             }),
           );
 
-          // ✅ payment user
           await AsyncStorage.setItem(
             'paymentUser',
             JSON.stringify({
@@ -108,21 +101,17 @@ export default function Signup({ navigation }) {
             }),
           );
 
-          resetForm();
-
-          setTimeout(() => {
-            navigation.navigate('Verify');
-          }, 800);
+          navigation.navigate('Verify');
         } else {
           Toast.show({
             type: 'error',
-            text1: data?.message || 'Signup failed',
+            text1: res.data?.message || 'Signup failed',
           });
         }
-      } catch (error) {
+      } catch (err) {
         Toast.show({
           type: 'error',
-          text1: error?.response?.data?.message || 'Server error. Try again.',
+          text1: err?.response?.data?.message || 'Server error',
         });
       } finally {
         setLoading(false);
@@ -139,106 +128,80 @@ export default function Signup({ navigation }) {
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.card}>
           {/* LOGO */}
-          <View style={styles.logoWrap}>
-            <Image
-              source={require('../assets/hirelink.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
+          <Image
+            source={require('../assets/hirelink.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
-          {/* HEADER */}
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.heading}>Create Your Hirelink Account</Text>
-              <Text style={styles.subText}>
-                It takes less than a minute to get started.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.loginBtn}
-              onPress={() => navigation.navigate('Signin')}
-            >
-              <Text style={styles.loginText}>Login</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.heading}>Create an account</Text>
+          <Text style={styles.subText}>
+            Find jobs, apply faster, get hired.
+          </Text>
 
           {/* FULL NAME */}
-          <Text style={styles.label}>Full name</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your name"
-             placeholderTextColor="#000"
+            placeholder="Full name"
+            placeholderTextColor="#6b7280"
             value={formik.values.fullname}
             onChangeText={formik.handleChange('fullname')}
-            onBlur={formik.handleBlur('fullname')}
           />
-          {formik.touched.fullname && formik.errors.fullname && (
+          {formik.errors.fullname && (
             <Text style={styles.error}>{formik.errors.fullname}</Text>
           )}
 
           {/* EMAIL */}
-          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your email"
-             placeholderTextColor="#000"
+            placeholder="Email address"
+            placeholderTextColor="#6b7280"
             autoCapitalize="none"
             keyboardType="email-address"
             value={formik.values.email}
             onChangeText={formik.handleChange('email')}
-            onBlur={formik.handleBlur('email')}
           />
-          {formik.touched.email && formik.errors.email && (
+          {formik.errors.email && (
             <Text style={styles.error}>{formik.errors.email}</Text>
           )}
 
           {/* MOBILE */}
-          <Text style={styles.label}>Mobile Number</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter mobile number"
-            placeholderTextColor="#000"
+            placeholder="Mobile number"
+            placeholderTextColor="#6b7280"
             keyboardType="number-pad"
             maxLength={10}
             value={formik.values.mobile}
             onChangeText={v =>
               formik.setFieldValue('mobile', v.replace(/\D/g, '').slice(0, 10))
             }
-            onBlur={formik.handleBlur('mobile')}
           />
-          {formik.touched.mobile && formik.errors.mobile && (
+          {formik.errors.mobile && (
             <Text style={styles.error}>{formik.errors.mobile}</Text>
           )}
 
           {/* PASSWORD */}
-          <Text style={styles.label}>Password</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter password"
-            placeholderTextColor="#000"
-            textcolor="#0000"
+            placeholder="Password"
+            placeholderTextColor="#6b7280"
             secureTextEntry
-            color="#000"
             value={formik.values.password}
             onChangeText={formik.handleChange('password')}
-            onBlur={formik.handleBlur('password')}
           />
-          {formik.touched.password && formik.errors.password && (
+          {formik.errors.password && (
             <Text style={styles.error}>{formik.errors.password}</Text>
           )}
 
-          {/* TERMS & CONDITIONS */}
+          {/* TERMS */}
           <TouchableOpacity
             style={styles.termsRow}
-            activeOpacity={0.8}
             onPress={() => setAgree(!agree)}
           >
-            <View style={[styles.checkbox, agree && styles.checkboxChecked]}>
-              {agree && <Text style={styles.checkMark}>✓</Text>}
+            <View style={[styles.checkbox, agree && styles.checked]}>
+              {agree && <Text style={styles.tick}>✓</Text>}
             </View>
-
             <Text style={styles.termsText}>
               I agree to Hirelink’s <Text style={styles.link}>Terms</Text> &{' '}
               <Text style={styles.link}>Privacy Policy</Text>
@@ -247,21 +210,24 @@ export default function Signup({ navigation }) {
 
           {/* SUBMIT */}
           <TouchableOpacity
-            style={[styles.submitBtn, (!agree || loading) && { opacity: 0.5 }]}
+            style={[styles.submitBtn, (!agree || loading) && { opacity: 0.6 }]}
+            disabled={!agree || loading}
             onPress={formik.handleSubmit}
-            disabled={loading || !agree}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitText}>Create Account</Text>
+              <Text style={styles.submitText}>Create account</Text>
             )}
           </TouchableOpacity>
-          {/* <Text style={styles.bottomText}>
-            By continuing, you agree to Hirelink’s{' '}
-            <Text style={styles.link}>Terms</Text> &{' '}
-            <Text style={styles.link}>Privacy Policy</Text>
-          </Text> */}
+
+          {/* LOGIN */}
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Already have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Signin')}>
+              <Text style={styles.loginLink}> Sign in</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -278,117 +244,100 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
     borderRadius: 18,
-    padding: 18,
-    elevation: 6,
-  },
-  logoWrap: {
-    alignItems: 'center',
-    marginBottom: 10,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   logo: {
     width: 150,
-    height: 60,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 10,
+    height: 50,
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   heading: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
     color: '#111827',
   },
   subText: {
-    fontSize: 10,
+    textAlign: 'center',
+    fontSize: 13,
     color: '#6b7280',
-    marginTop: 2,
-  },
-  loginBtn: {
-    borderWidth: 1,
-    borderColor: '#d4d4d8',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-  },
-  loginText: {
-    fontWeight: '700',
-    color: '#111827',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#d1d5db',
     borderRadius: 12,
-    paddingHorizontal: 14,
     height: 48,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: '#111',
     marginBottom: 8,
-    color:'#0000',
+    backgroundColor: '#fff',
   },
   error: {
-    color: 'red',
+    color: '#dc2626',
     fontSize: 12,
     marginBottom: 6,
-  },
-  submitBtn: {
-    backgroundColor: '#0f172a',
-    height: 48,
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  bottomText: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 14,
-  },
-  link: {
-    fontWeight: '800',
-    color: '#111827',
-  },
-  submitText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
   },
   termsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
     gap: 10,
+    marginVertical: 12,
   },
-
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#0f172a',
+    borderColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  checkboxChecked: {
-    backgroundColor: '#0f172a',
+  checked: {
+    backgroundColor: '#111827',
   },
-
-  checkMark: {
+  tick: {
     color: '#fff',
     fontWeight: '900',
-    fontSize: 14,
   },
-
   termsText: {
-    flex: 1,
     fontSize: 12,
     color: '#374151',
+    flex: 1,
+  },
+  link: {
+    fontWeight: '800',
+    color: '#2557a7',
+  },
+  submitBtn: {
+    backgroundColor: '#2557a7',
+    height: 48,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  submitText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 15,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  footerText: {
+    fontSize: 13,
+    color: '#374151',
+  },
+  loginLink: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#2557a7',
   },
 });

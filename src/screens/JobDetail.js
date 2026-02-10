@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Header from './Header';
-import Footer from './Footer';
 import {
   View,
   Text,
@@ -8,6 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+
+import Header from './Header';
+import FooterMenu from './Footer';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,33 +22,31 @@ export default function JobDetail({ route, navigation }) {
   const [candidate, setCandidate] = useState(null);
   const [savedJobs, setSavedJobs] = useState([]);
 
+  /* ================= LOAD USER ================= */
   useEffect(() => {
-    const loadCandidate = async () => {
-      const cand = await AsyncStorage.getItem('candidate');
-      if (cand) setCandidate(JSON.parse(cand));
-    };
-    loadCandidate();
+    AsyncStorage.getItem('candidate').then(c => {
+      if (c) setCandidate(JSON.parse(c));
+    });
   }, []);
 
+  /* ================= SAVED JOBS ================= */
   const fetchSavedJobs = async canId => {
     try {
       const res = await axios.get(`${BASE_URL}candidate/saved-jobs/${canId}`);
-
       if (res.data.status) {
         setSavedJobs(res.data.data.map(j => Number(j.save_job_id)));
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   useEffect(() => {
     if (candidate?.can_id) fetchSavedJobs(candidate.can_id);
   }, [candidate?.can_id]);
 
+  /* ================= SAVE / UNSAVE ================= */
   const toggleSaveJob = async () => {
     if (!candidate?.can_id) {
-      Toast.show({ type: 'info', text1: 'Please login to save jobs' });
+      Toast.show({ type: 'info', text1: 'Please login first' });
       navigation.navigate('Signin');
       return;
     }
@@ -62,25 +62,23 @@ export default function JobDetail({ route, navigation }) {
     try {
       if (isSaved) {
         await axios.post(`${BASE_URL}candidate/unsave-job`, payload);
-        setSavedJobs(prev => prev.filter(id => id !== jobId));
-        Toast.show({ type: 'success', text1: 'Job removed' });
+        setSavedJobs(p => p.filter(id => id !== jobId));
       } else {
         await axios.post(`${BASE_URL}candidate/save-job`, payload);
-        setSavedJobs(prev => [...prev, jobId]);
-        Toast.show({ type: 'success', text1: 'Job saved ❤️' });
+        setSavedJobs(p => [...p, jobId]);
       }
     } catch {
       Toast.show({ type: 'error', text1: 'Server error' });
     }
   };
 
+  /* ================= APPLY ================= */
   const handleApplyClick = async () => {
     const cand = await AsyncStorage.getItem('candidate');
     if (!cand) {
       navigation.navigate('Signin');
       return;
     }
-
     navigation.navigate('Apply', { job_id: job.job_id });
   };
 
@@ -89,22 +87,19 @@ export default function JobDetail({ route, navigation }) {
   return (
     <>
       <Header navigation={navigation} />
+
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ padding: 14 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 90 }}
       >
-        {/* HEADER */}
+        {/* ===== TOP CARD (INDEED STYLE) ===== */}
         <View style={styles.topCard}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.saveBtn} onPress={toggleSaveJob}>
-            <Text
-              style={[styles.saveText, isSaved ? { color: '#2557a7' } : null]}
-            >
-              {isSaved ? 'Saved 🔖' : 'Save 📑'}
-            </Text>
+            <Text style={{ fontSize: 22 }}>{isSaved ? '🔖' : '📑'}</Text>
           </TouchableOpacity>
 
           <Text style={styles.title}>{job.job_title}</Text>
@@ -112,125 +107,222 @@ export default function JobDetail({ route, navigation }) {
             {job.job_company} · {job.city_name}, {job.state_name}
           </Text>
 
-          <Text style={styles.salary}>₹{job.job_salary} / month</Text>
+          {!!job.job_salary && (
+            <Text style={styles.salary}>₹{job.job_salary} / month</Text>
+          )}
 
           <TouchableOpacity style={styles.applyBtn} onPress={handleApplyClick}>
-            <Text style={styles.applyText}>Apply Now</Text>
+            <Text style={styles.applyText}>Apply now</Text>
           </TouchableOpacity>
         </View>
 
-        {/* DETAILS */}
-        <View style={styles.detailCard}>
-          <Text style={styles.sectionTitle}>Job Description</Text>
+        {/* ===== DETAILS ===== */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Job details</Text>
+
           <Text style={styles.desc}>
-            {job.job_description || 'No description'}
+            {job.job_description || 'No description provided.'}
           </Text>
 
           <View style={styles.hr} />
 
-          <Text style={styles.sectionTitle}>Skills</Text>
-          <Text style={styles.desc}>{job.job_skills || '-'}</Text>
+          {/* JOB TYPE */}
+          <View style={styles.infoRow}>
+            {/* <Icon name="briefcase-outline" size={18} /> */}
+            <Text style={{ fontSize: 22 }}>💼</Text>
+            <Text style={styles.infoTitle}>Job type</Text>
+          </View>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>{job.job_type || 'Full-time'}</Text>
+          </View>
 
-          <View style={styles.hr} />
+          {/* PAY */}
+          <View style={styles.infoRow}>
+            {/* <Icon name="currency-rupee" size={18} /> */}
+            <Text style={{ fontSize: 22 }}>💵</Text>
+            <Text style={styles.infoTitle}>Pay</Text>
+          </View>
+          <Text style={styles.infoValue}>₹ {job.job_salary}</Text>
 
-          <Text style={styles.sectionTitle}>Job Type</Text>
-          <Text style={styles.desc}>{job.job_type || '-'}</Text>
-
-          <View style={styles.hr} />
-
-          <Text style={styles.sectionTitle}>Location</Text>
-          <Text style={styles.desc}>
+          {/* LOCATION */}
+          <View style={styles.infoRow}>
+            {/* <Icon name="map-marker-outline" size={18} /> */}
+            <Text style={{ fontSize: 22 }}>📍</Text>
+            <Text style={styles.infoTitle}>Location</Text>
+          </View>
+          <Text style={styles.infoValue}>
             {job.city_name}, {job.state_name}
           </Text>
+
+          {/* SKILLS */}
+          <View style={styles.infoRow}>
+            {/* <Icon name="star-outline" size={18} /> */}
+            <Text style={{ fontSize: 22 }}>👉</Text>
+            <Text style={styles.infoTitle}>Skills</Text>
+          </View>
+
+          <View style={styles.skillWrap}>
+            {job.job_skills?.split(',').map((s, i) => (
+              <View key={i} style={styles.skillChip}>
+                <Text style={styles.skillText}>{s.trim()}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.infoRow}>
+            {/* <Icon name="star-outline" size={18} /> */}
+            <Text style={{ fontSize: 22 }}>📃</Text>
+            <Text style={styles.infoTitle}>Description</Text>
+          </View>
+           <Text style={styles.infoValue}>
+            {job.job_description || 'No description provided.'}
+          </Text>
         </View>
-        <Footer navigation={navigation} />
       </ScrollView>
+
+      {/* ===== INDEED STYLE FIXED FOOTER ===== */}
+      <FooterMenu navigation={navigation} active="Home" />
     </>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f3f6fb',
+  },
 
   topCard: {
-    borderWidth: 1,
-    borderColor: '#e4e4e4',
+    backgroundColor: '#fff',
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
 
   back: {
     fontWeight: '800',
-    color: '#111827',
-    marginBottom: 10,
+    marginBottom: 8,
+    color: '#111',
   },
 
   saveBtn: {
-    alignSelf: 'flex-end',
-    marginBottom: 8,
-  },
-
-  saveText: {
-    fontWeight: '800',
-    color: '#444',
+    position: 'absolute',
+    top: 16,
+    right: 16,
   },
 
   title: {
     fontSize: 18,
     fontWeight: '900',
     color: '#111',
-    marginBottom: 4,
   },
 
   subText: {
-    color: '#6b7280',
     fontSize: 13,
-    marginBottom: 10,
+    color: '#6b7280',
+    marginTop: 4,
   },
 
   salary: {
     fontSize: 15,
     fontWeight: '800',
     color: '#188a42',
-    marginBottom: 12,
+    marginVertical: 10,
   },
 
   applyBtn: {
-    backgroundColor: '#ffd60a',
+    backgroundColor: '#029139',
     borderRadius: 10,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
 
   applyText: {
-    fontWeight: '900',
-    color: '#000',
+    color: '#fff',
+    fontWeight: '800',
   },
 
-  detailCard: {
-    borderWidth: 1,
-    borderColor: '#e4e4e4',
+  card: {
+    backgroundColor: '#fff',
     borderRadius: 14,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
 
   sectionTitle: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#111',
-    marginBottom: 6,
+    marginBottom: 8,
   },
 
   desc: {
     fontSize: 13,
-    color: '#333',
+    color: '#374151',
     lineHeight: 20,
   },
 
   hr: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: '#e5e7eb',
     marginVertical: 12,
+  },
+
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 3,
+  },
+
+  infoTitle: {
+    fontWeight: '800',
+    fontSize: 14,
+  },
+
+  infoValue: {
+    marginLeft: 36,
+    color: '#374151',
+    marginTop: 4,
+  },
+
+  chip: {
+    alignSelf: 'flex-start',
+    marginLeft: 24,
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 4,
+  },
+
+  chipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#3730a3',
+  },
+
+  skillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginLeft: 36,
+    marginTop: 6,
+  },
+
+  skillChip: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  skillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
   },
 });

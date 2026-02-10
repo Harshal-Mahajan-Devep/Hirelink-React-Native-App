@@ -283,8 +283,8 @@ export default function ApplyJobScreen({ route, navigation }) {
               : 'Apply'}
           </Text>
         </Pressable>
-        <Footer navigation={navigation} />
       </ScrollView>
+      <Footer navigation={navigation} />
 
       {/* ===== EDUCATION TYPE MODAL ===== */}
       <Modal transparent visible={showEduType}>

@@ -1,7 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Header from './Header';
-import Footer from './Footer';
-
 import {
   View,
   Text,
@@ -10,122 +7,60 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 
+import Header from './Header';
+import FooterMenu from './Footer';
 import JobSearchBar from './JobSearchBar';
 import { BASE_URL } from '../config/constants';
+import { COLORS } from '../config/colors';
+
+const ACTIVE = 1;
 
 export default function Jobs({ navigation, route }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [candidate, setCandidate] = useState(null);
   const [savedJobs, setSavedJobs] = useState([]);
 
-  // ✅ search states
   const [searchKeyword, setSearchKeyword] = useState(
-    route?.params?.keyword || '',
+    route?.params?.keyword || route?.params?.company || '',
   );
   const [searchPlace, setSearchPlace] = useState(route?.params?.place || '');
-  const [appliedKeyword, setAppliedKeyword] = useState(
-    route?.params?.keyword || '',
-  );
-  const [appliedPlace, setAppliedPlace] = useState(route?.params?.place || '');
-  const [hasSearched, setHasSearched] = useState(
-    !!(route?.params?.keyword || route?.params?.place),
-  );
 
-  /* ================= LOAD CANDIDATE ================= */
+  const [appliedKeyword, setAppliedKeyword] = useState(
+    route?.params?.company || '',
+  );
+  const [appliedPlace, setAppliedPlace] = useState('');
+
+  /* ================= LOAD USER ================= */
   useEffect(() => {
-    const loadCandidate = async () => {
-      const cand = await AsyncStorage.getItem('candidate');
-      if (cand) setCandidate(JSON.parse(cand));
-    };
-    loadCandidate();
+    AsyncStorage.getItem('candidate').then(res => {
+      if (res) setCandidate(JSON.parse(res));
+    });
   }, []);
 
-  let one = 1;
   /* ================= FETCH JOBS ================= */
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}candidate/getdatawhere/tbl_job/job_status/${one}`,
-        );
-
+    axios
+      .get(`${BASE_URL}candidate/getdatawhere/tbl_job/job_status/${ACTIVE}`)
+      .then(res => {
         if (res.data.status === 'success') {
           setJobs(res.data.data || []);
-        } else {
-          setJobs([]);
         }
-      } catch (error) {
-        console.log('API Error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchJobs();
+      })
+      .catch(() => Toast.show({ type: 'error', text1: 'Failed to load jobs' }))
+      .finally(() => setLoading(false));
   }, []);
 
-  /* ================= FETCH SAVED JOBS ================= */
-  const fetchSavedJobs = async canId => {
-    try {
-      const res = await axios.get(`${BASE_URL}candidate/saved-jobs/${canId}`);
-
-      if (res.data.status) {
-        setSavedJobs(res.data.data.map(j => Number(j.save_job_id)));
-      }
-    } catch {
-      Toast.show({ type: 'error', text1: 'Failed to load saved jobs' });
-    }
-  };
-
-  useEffect(() => {
-    if (candidate?.can_id) {
-      fetchSavedJobs(candidate.can_id);
-    }
-  }, [candidate?.can_id]);
-
-  /* ================= SAVE/UNSAVE ================= */
-  const toggleSaveJob = async jobId => {
-    if (!candidate?.can_id) {
-      Toast.show({ type: 'info', text1: 'Please login to save jobs' });
-      navigation.navigate('Signin');
-      return;
-    }
-
-    const isSaved = savedJobs.includes(Number(jobId));
-
-    const payload = {
-      save_candidate_id: candidate.can_id,
-      save_job_id: Number(jobId),
-    };
-
-    try {
-      if (isSaved) {
-        await axios.post(`${BASE_URL}candidate/unsave-job`, payload);
-        setSavedJobs(prev => prev.filter(id => id !== Number(jobId)));
-        Toast.show({ type: 'success', text1: 'Job removed' });
-      } else {
-        await axios.post(`${BASE_URL}candidate/save-job`, payload);
-        setSavedJobs(prev => [...prev, Number(jobId)]);
-        Toast.show({ type: 'success', text1: 'Job saved ❤️' });
-      }
-    } catch {
-      Toast.show({ type: 'error', text1: 'Server error' });
-    }
-  };
-
-  /* ================= FILTER ================= */
+  /* ================= FILTER (WEB LOGIC 1:1) ================= */
   const filteredJobs = jobs.filter(job => {
-    if (Number(job.job_status) !== one) return false;
+    if (Number(job.job_status) !== ACTIVE) return false;
 
-    const keyword = (appliedKeyword || '').toLowerCase();
-    const place = (appliedPlace || '').toLowerCase();
+    const keyword = appliedKeyword.toLowerCase();
+    const place = appliedPlace.toLowerCase();
 
     const keywordMatch =
       !keyword ||
@@ -147,183 +82,108 @@ export default function Jobs({ navigation, route }) {
     return keywordMatch && placeMatch;
   });
 
-  /* ================= RENDER CARD ================= */
-  const renderJobCard = ({ item }) => {
-    const isSaved = savedJobs.includes(Number(item.job_id));
+  /* ================= CARD ================= */
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => navigation.navigate('JobDetails', { job: item })}
+    >
+      <Text style={styles.title}>{item.job_title}</Text>
+      <Text style={styles.company}>
+        {item.job_company} · {item.city_name}, {item.state_name}
+      </Text>
 
-    return (
-      <>
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate('JobDetails', { job: item })}
-          activeOpacity={0.8}
-        >
-          {/* Save Button */}
-          <TouchableOpacity
-            style={styles.saveBtn}
-            onPress={e => {
-              e.stopPropagation?.();
-              toggleSaveJob(item.job_id);
-            }}
-          >
-            <Text
-              style={[styles.saveIcon, isSaved ? { color: '#2557a7' } : null]}
-            >
-              {isSaved ? '🔖' : '📑'}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>{item.job_title}</Text>
-          <Text style={styles.subText}>
-            {item.job_company} · {item.city_name}, {item.state_name}
-          </Text>
-
-          <View style={styles.badges}>
-            <Text style={styles.badgeChip}>₹{item.job_salary}/month</Text>
-            <Text style={styles.badgeChip}>{item.job_type}</Text>
-          </View>
-        </TouchableOpacity>
-      </>
-    );
-  };
+      <View style={styles.chips}>
+        <Text style={styles.chip}>{item.job_type}</Text>
+        <Text style={styles.chip}>₹{item.job_salary}/month</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <>
       <Header navigation={navigation} />
-      <View style={styles.container}>
-        {/* Search Section */}
-        <View style={{ padding: 14 }}>
-          <JobSearchBar
-            jobs={jobs}
-            searchKeyword={searchKeyword}
-            setSearchKeyword={setSearchKeyword}
-            searchPlace={searchPlace}
-            setSearchPlace={setSearchPlace}
-            appliedKeyword={appliedKeyword}
-            setAppliedKeyword={setAppliedKeyword}
-            appliedPlace={appliedPlace}
-            setAppliedPlace={setAppliedPlace}
-            onSearch={() => {
-              setAppliedKeyword(searchKeyword.trim());
-              setAppliedPlace(searchPlace.trim());
-              setHasSearched(true);
-            }}
-          />
-        </View>
 
-        <Text style={styles.heading}>Jobs for you</Text>
+      <View style={styles.container}>
+        <JobSearchBar
+          jobs={jobs} // ✅ VERY IMPORTANT
+          searchKeyword={searchKeyword}
+          setSearchKeyword={setSearchKeyword}
+          searchPlace={searchPlace}
+          setSearchPlace={setSearchPlace}
+          appliedKeyword={appliedKeyword}
+          setAppliedKeyword={setAppliedKeyword}
+          appliedPlace={appliedPlace}
+          setAppliedPlace={setAppliedPlace}
+          onSearch={() => {
+            setAppliedKeyword(searchKeyword.trim());
+            setAppliedPlace(searchPlace.trim());
+          }}
+        />
+
+        <Text style={styles.heading}>
+          {appliedKeyword ? `Jobs at ${appliedKeyword}` : 'Jobs for you'}
+        </Text>
 
         {loading ? (
-          <ActivityIndicator size="large" style={{ marginTop: 18 }} />
+          <ActivityIndicator size="large" />
         ) : (
-          <>
-            {hasSearched && filteredJobs.length === 0 ? (
-              <View style={styles.noJobs}>
-                <Text style={{ fontSize: 18 }}>💼</Text>
-                <Text style={styles.noJobsTitle}>No jobs found</Text>
-                <Text style={styles.noJobsText}>
-                  Try different keywords or location
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredJobs}
-                keyExtractor={item => item.job_id.toString()}
-                renderItem={renderJobCard}
-                contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-          </>
+          <FlatList
+            data={filteredJobs}
+            keyExtractor={i => String(i.job_id)}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+          />
         )}
       </View>
+
+      <FooterMenu navigation={navigation} active="Home" />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    padding: 14,
+  },
   heading: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111',
-    paddingHorizontal: 14,
-    marginTop: 6,
-    marginBottom: 10,
+    marginVertical: 12,
+    color: COLORS.textDark,
   },
-
   card: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#d9d9d9',
-    borderRadius: 14,
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    position: 'relative',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-
-  saveBtn: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    backgroundColor: '#fff',
-    borderRadius: 999,
-    width: 34,
-    height: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-  },
-
-  saveIcon: {
-    fontSize: 16,
-    color: '#444',
-  },
-
   title: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111',
-    marginBottom: 4,
+    color: COLORS.textDark,
   },
-
-  subText: {
-    color: '#6b7280',
+  company: {
     fontSize: 13,
-    marginBottom: 10,
+    color: COLORS.textLight,
+    marginVertical: 6,
   },
-
-  badges: {
+  chips: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-  },
-
-  badgeChip: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#eef7ed',
-    color: '#188a42',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  noJobs: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-
-  noJobsTitle: {
-    fontSize: 16,
-    fontWeight: '800',
     marginTop: 6,
   },
-
-  noJobsText: {
+  chip: {
+    backgroundColor: COLORS.chipBg,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
     fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
 });
