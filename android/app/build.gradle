@@ -78,13 +78,14 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.hirelinkapp"
-    defaultConfig {
-        applicationId "com.hirelinkapp"
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
-    }
+   defaultConfig {
+    applicationId "com.hirelinkapp"
+    minSdkVersion rootProject.ext.minSdkVersion
+    targetSdkVersion rootProject.ext.targetSdkVersion
+    versionCode 8        
+    versionName "1.0.8"  
+}
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
