@@ -5,7 +5,7 @@ workflows:
     instance_type: mac_mini_m2
 
     environment:
-      xcode: latest
+      xcode: 16.3
       cocoapods: default
 
     scripts:
@@ -21,11 +21,13 @@ workflows:
 
       - name: Build iOS App
         script: |
-          xcodebuild \
-          -project ios/HirelinkApp.xcodeproj \
-          -scheme HirelinkApp \
-          -sdk iphoneos \
-          -configuration Release \
-          build CODE_SIGNING_ALLOWED=NO
+          xcodebuild 
+          -workspace ios/HirelinkApp.xcworkspace 
+          -scheme HirelinkApp 
+          -configuration Release 
+          -sdk iphoneos 
+          CODE_SIGNING_ALLOWED=NO 
+          clean build
+
     artifacts:
       - build/ios/ipa/*.ipa
