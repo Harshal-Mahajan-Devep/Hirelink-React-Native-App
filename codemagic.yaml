@@ -1,6 +1,6 @@
 workflows:
   ios-workflow:
-  name: iOS Build
+   name: iOS Build
 
 instance_type: mac_mini_m2
 
