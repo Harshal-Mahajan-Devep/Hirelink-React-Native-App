@@ -20,11 +20,11 @@ workflows:
           pod install --repo-update --verbose
 
       - name: Build IPA
-  script: |
-    xcode-project build-ipa \
-      --project ios/HirelinkApp.xcodeproj \
-      --scheme HirelinkApp \
-      --archive-xcargs "CODE_SIGNING_ALLOWED=NO"
+        script: |
+          xcode-project build-ipa \
+          --project ios/HirelinkApp.xcodeproj \
+          --scheme HirelinkApp \
+          --archive-xcargs "CODE_SIGNING_ALLOWED=NO"
 
     artifacts:
       - build/ios/ipa/*.ipa
