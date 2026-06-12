@@ -1,8 +1,7 @@
 workflows:
-ios-workflow:
-name: iOS Build
+  ios-workflow:
+  name: iOS Build
 
-```
 instance_type: mac_mini_m2
 
 environment:
@@ -34,4 +33,3 @@ scripts:
 artifacts:
   - "**/*.app"
   - "**/*.xcarchive"
-```
