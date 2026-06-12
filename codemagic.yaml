@@ -16,6 +16,7 @@ workflows:
       - name: Install Pods
         script: |
           cd ios
+          rm -rf Pods Podfile.lock
           pod repo update
           pod install --repo-update
 
